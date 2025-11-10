@@ -109,9 +109,46 @@ Une session de développement intensive a été menée pour améliorer l'efficac
 *   **Mises à Jour en Temps Réel :**
     *   Le tableau de bord utilise maintenant les **Supabase Realtime Subscriptions** pour mettre à jour les statistiques (comme les dépôts en attente) instantanément, sans nécessiter de rafraîchissement de la page.
 
+*   **Améliorations de la Table des Investisseurs :**
+    *   **Export CSV :** Un bouton "Exporter" a été ajouté pour télécharger la liste complète des investisseurs au format CSV.
+    *   **Filtre par Statut :** Une liste déroulante permet de filtrer les investisseurs affichés (sur la page courante) par statut ("Actif", "Inactif", "Nouveau").
+
+*   **Mises à Jour en Temps Réel :**
+    *   Le tableau de bord utilise maintenant les **Supabase Realtime Subscriptions** pour mettre à jour les statistiques (comme les dépôts en attente) instantanément, sans nécessiter de rafraîchissement de la page.
+
 *   **Traitement par Lot (En cours) :**
     *   L'interface pour le traitement en masse des dépôts (cases à cocher, boutons d'action) a été entièrement développée.
     *   Les fonctions backend (`approve_deposits_in_bulk`, `reject_deposits_in_bulk`) ont été créées. *(Note : cette fonctionnalité est également bloquée par le problème de déploiement).*
+
+#### **2.6. Améliorations du Tableau de Bord Administrateur (Session du 10/11/2025)**
+
+Une nouvelle session de développement a été menée pour améliorer davantage l'efficacité et l'ergonomie de l'espace d'administration, en se concentrant sur la gestion des utilisateurs et des transactions.
+
+*   **Page des Paramètres (Admin Settings) :**
+    *   **Contrôles de Formulaire Dynamiques :** Implémentation de contrôles de formulaire adaptés (interrupteurs pour les booléens, menus déroulants pour les sélections, champs numériques) basés sur le type de chaque paramètre.
+    *   **Mise à jour de la Base de Données :** Ajout des colonnes `type` et `options` à la table `settings` pour supporter cette fonctionnalité.
+
+*   **Gestion des Utilisateurs (Page `admin/users`) :**
+    *   **Optimisation des Données :** Remplacement de la logique de récupération des données côté client par une fonction RPC (`get_investor_list_details`) plus efficace côté serveur, résolvant le problème N+1 et incluant le statut d'activation (`banned_until`) et le numéro de téléphone (`phone`).
+    *   **Actions Utilisateur Étendues :** Le menu d'actions "..." pour chaque utilisateur inclut désormais :
+        *   **"Créditer l'utilisateur" :** Ajout d'une boîte de dialogue pour créditer manuellement le portefeuille d'un utilisateur.
+        *   **"Activer/Désactiver le compte" :** Ajout de la possibilité d'activer ou de désactiver un compte utilisateur avec une boîte de dialogue de confirmation. Un badge "Banni" s'affiche pour les utilisateurs désactivés.
+        *   **"Modifier l'utilisateur" :** Ajout d'une boîte de dialogue pour modifier les informations de profil d'un utilisateur (prénom, nom, post-nom, téléphone).
+    *   **Correction de Bug Majeur :** Résolution de l'erreur `DialogPortal must be used within Dialog` en refactorisant la structure des boîtes de dialogue pour qu'elles soient correctement imbriquées dans les menus déroulants.
+    *   **Nettoyage :** Suppression du composant `UserList.tsx` obsolète.
+
+*   **Gestion des Dépôts en Attente (Page `admin/deposits`) :**
+    *   **Action "Ajuster le montant" :** Remplacement de l'action générique "Créditer l'utilisateur" par une action spécifique "Ajuster le montant" pour les dépôts en attente, permettant de modifier le montant d'un dépôt avant son approbation.
+    *   **Mise à jour de la Base de Données :** Création de la fonction RPC `admin_adjust_deposit_amount` pour supporter cette fonctionnalité.
+
+*   **Gestion des Retraits en Attente (Page `admin/withdrawals`) :**
+    *   **Action "Créditer l'utilisateur" :** Ajout de l'option "Créditer l'utilisateur" dans le menu d'actions pour chaque retrait en attente.
+
+*   **Gestion des Contrats PDF (Simplification) :**
+    *   **Suppression de la Gestion par Contrat :** Suppression de la fonctionnalité de téléversement de PDF pour chaque contrat individuel. L'application utilise désormais exclusivement le contrat PDF générique géré dans les paramètres.
+    *   **Nettoyage du Code :** Suppression de l'interface utilisateur de téléversement dans la boîte de dialogue "Gérer les Contrats" et suppression de la fonction `uploadContractPdf` du service.
+    *   **Nettoyage de la Base de Données :** Suppression de la colonne `contract_pdf_url` de la table `contracts` et mise à jour de la fonction RPC `get_contracts_for_user` pour ne plus y faire référence.
+
 
 ---
 

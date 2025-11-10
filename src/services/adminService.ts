@@ -41,6 +41,13 @@ export const rejectDepositsInBulk = async (transactionIds: string[], reason: str
   return data;
 };
 
+export const adminAdjustDepositAmount = async ({ transactionId, newAmount }: { transactionId: string; newAmount: number }) => {
+  const { data, error } = await supabase.rpc('admin_adjust_deposit_amount', { transaction_id_to_adjust: transactionId, new_amount: newAmount });
+  if (error) throw new Error(error.message);
+  if (data && !data.success) throw new Error(data.error || "An unknown error occurred while adjusting amount.");
+  return data;
+};
+
 // --- User Management ---
 export const getAllUsers = async () => {
   const { data, error } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
@@ -71,72 +78,53 @@ export const getUserContracts = async (userId: string) => {
   return data || [];
 };
 
-export const uploadContractPdf = async (contractId: string, userId: string, file: File) => {
-  const filePath = `${userId}/${contractId}.pdf`;
-  const { error: uploadError } = await supabase.storage
-    .from('contracts')
-    .upload(filePath, file, { cacheControl: '3600', upsert: true });
-
-  if (uploadError) {
-    console.error("Error uploading contract PDF:", uploadError);
-    throw new Error("Could not upload contract PDF.");
-  }
-
-  const { data: publicUrlData } = supabase.storage
-    .from('contracts')
-    .getPublicUrl(filePath);
-
-  const publicUrl = publicUrlData.publicUrl;
-
-  const { error: updateError } = await supabase
-    .from('contracts')
-    .update({ contract_pdf_url: publicUrl })
-    .eq('id', contractId);
-
-  if (updateError) {
-    console.error("Error updating contract PDF URL:", updateError);
-    throw new Error("Could not update contract PDF URL in database.");
-  }
-
-  return publicUrl;
-};
-
 export const getInvestorsList = async (searchQuery?: string, page: number = 1, pageSize: number = 10) => {
-  let profilesQuery = supabase
-    .from("profiles")
-    .select("id, email, first_name, last_name, post_nom", { count: 'exact' });
+  const { data, error } = await supabase.rpc('get_investor_list_details', {
+    p_search_query: searchQuery,
+    p_page_num: page,
+    p_page_size: pageSize,
+  });
 
-  if (searchQuery) {
-    profilesQuery = profilesQuery.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,post_nom.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
-  }
-
-  const from = (page - 1) * pageSize;
-  const to = page * pageSize - 1;
-
-  const { data: profiles, error: profilesError, count } = await profilesQuery
-    .order("created_at", { ascending: false })
-    .range(from, to);
-
-  if (profilesError) {
-    console.error("Error fetching investors list:", profilesError);
+  if (error) {
+    console.error("Error fetching investors list:", error);
     throw new Error("Could not fetch investors list.");
   }
 
-  const investorsData = await Promise.all(
-    (profiles || []).map(async (profile) => {
-      const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', profile.id).single();
-      const { data: contracts } = await supabase.from('contracts').select('status').eq('user_id', profile.id);
-      return { ...profile, wallet, contracts: contracts || [] };
-    })
-  );
-
-  return { data: investorsData, count: count || 0 };
+  // The RPC returns a single JSON object with 'data' and 'count' keys.
+  return data;
 };
 
 // --- Admin Actions ---
 export const creditUser = async ({ userId, amount, reason }: { userId: string; amount: number; reason: string }) => {
   const { data, error } = await supabase.rpc('admin_credit_user', { target_user_id: userId, credit_amount: amount, reason: reason });
   if (error) throw new Error("Could not credit user.");
+  if (data && !data.success) throw new Error(data.error || "An unknown error occurred.");
+  return data;
+};
+
+export const deactivateUser = async (userId: string) => {
+  const { data, error } = await supabase.rpc('admin_deactivate_user', { user_id_to_deactivate: userId });
+  if (error) throw new Error("Could not deactivate user.");
+  if (data && !data.success) throw new Error(data.error || "An unknown error occurred.");
+  return data;
+};
+
+export const activateUser = async (userId: string) => {
+  const { data, error } = await supabase.rpc('admin_activate_user', { user_id_to_activate: userId });
+  if (error) throw new Error("Could not activate user.");
+  if (data && !data.success) throw new Error(data.error || "An unknown error occurred.");
+  return data;
+};
+
+export const updateUserProfile = async ({ userId, firstName, lastName, postNom, phone }: { userId: string; firstName: string; lastName: string; postNom: string; phone: string; }) => {
+  const { data, error } = await supabase.rpc('admin_update_user_profile', {
+    p_user_id: userId,
+    p_first_name: firstName,
+    p_last_name: lastName,
+    p_post_nom: postNom,
+    p_phone: phone,
+  });
+  if (error) throw new Error("Could not update user profile.");
   if (data && !data.success) throw new Error(data.error || "An unknown error occurred.");
   return data;
 };
@@ -160,6 +148,15 @@ export const getCashFlowSummary = async () => {
   if (error) {
     console.error("Error fetching cash flow summary:", error);
     throw new Error("Could not fetch cash flow summary.");
+  }
+  return data || [];
+};
+
+export const getUserGrowthSummary = async () => {
+  const { data, error } = await supabase.rpc('get_user_growth_summary');
+  if (error) {
+    console.error("Error fetching user growth summary:", error);
+    throw new Error("Could not fetch user growth summary.");
   }
   return data || [];
 };

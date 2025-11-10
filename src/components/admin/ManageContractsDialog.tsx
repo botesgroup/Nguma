@@ -1,78 +1,29 @@
-import { useState } from "react";
-import { DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+
+import { useQuery } from "@tanstack/react-query";
+import { DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getUserContracts, uploadContractPdf } from "@/services/adminService";
+import { getUserContracts } from "@/services/adminService";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Upload } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { formatCurrency } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface ManageContractsDialogProps {
-  userId: string | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  userId: string;
 }
 
-export const ManageContractsDialog = ({ userId, open, onOpenChange }: ManageContractsDialogProps) => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [fileInputKey, setFileInputKey] = useState(Date.now()); // Key to reset file input
-
+export const ManageContractsDialog = ({ userId }: ManageContractsDialogProps) => {
   const { data: contracts, isLoading } = useQuery({
     queryKey: ["userContracts", userId],
-    queryFn: () => (userId ? getUserContracts(userId) : Promise.resolve([])),
-    enabled: open && !!userId,
+    queryFn: () => getUserContracts(userId),
+    enabled: !!userId,
   });
-
-  const uploadMutation = useMutation({
-    mutationFn: ({ contractId, userId, file }: { contractId: string; userId: string; file: File }) =>
-      uploadContractPdf(contractId, userId, file),
-    onSuccess: () => {
-      toast({
-        title: "Succès",
-        description: "Fichier PDF du contrat téléversé avec succès.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["userContracts", userId] });
-      setSelectedFile(null);
-      setFileInputKey(Date.now()); // Reset file input
-    },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Erreur de téléversement",
-        description: error.message,
-      });
-    },
-  });
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files.length > 0) {
-      setSelectedFile(event.target.files[0]);
-    } else {
-      setSelectedFile(null);
-    }
-  };
-
-  const handleUpload = (contractId: string) => {
-    if (!selectedFile || !userId) {
-      toast({
-        variant: "destructive",
-        title: "Erreur",
-        description: "Veuillez sélectionner un fichier PDF.",
-      });
-      return;
-    }
-    uploadMutation.mutate({ contractId, userId, file: selectedFile });
-  };
 
   return (
     <DialogContent className="sm:max-w-[800px]">
       <DialogHeader>
-        <DialogTitle>Gérer les Contrats de l'Utilisateur</DialogTitle>
+        <DialogTitle>Contrats de l'Utilisateur</DialogTitle>
         <DialogDescription>
-          Téléversez les fichiers PDF des contrats pour l'utilisateur sélectionné.
+          Liste de tous les contrats, actifs et passés, pour l'utilisateur sélectionné.
         </DialogDescription>
       </DialogHeader>
       <div className="py-4">
@@ -83,48 +34,27 @@ export const ManageContractsDialog = ({ userId, open, onOpenChange }: ManageCont
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID Contrat</TableHead>
+                  <TableHead>Date de début</TableHead>
                   <TableHead>Montant</TableHead>
                   <TableHead>Statut</TableHead>
-                  <TableHead>Fichier PDF</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Durée</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {contracts.map((contract) => (
                   <TableRow key={contract.id}>
-                    <TableCell>{contract.id.substring(0, 8)}</TableCell>
-                    <TableCell>{contract.amount}</TableCell>
-                    <TableCell>{contract.status}</TableCell>
+                    <TableCell>{format(new Date(contract.start_date), "dd/MM/yyyy")}</TableCell>
+                    <TableCell>{formatCurrency(contract.amount, contract.currency)}</TableCell>
                     <TableCell>
-                      {contract.contract_pdf_url ? (
-                        <a href={contract.contract_pdf_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                          Voir PDF
-                        </a>
-                      ) : (
-                        "Aucun fichier"
-                      )}
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        contract.status === 'active' ? 'bg-green-100 text-green-800' :
+                        contract.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {contract.status}
+                      </span>
                     </TableCell>
-                    <TableCell className="text-right flex items-center justify-end space-x-2">
-                      <Input 
-                        key={fileInputKey} // Use key to reset input
-                        id={`file-upload-${contract.id}`}
-                        type="file" 
-                        accept="application/pdf" 
-                        className="hidden"
-                        onChange={handleFileChange}
-                      />
-                      <label htmlFor={`file-upload-${contract.id}`} className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-3 cursor-pointer">
-                        <Upload className="mr-2 h-4 w-4" /> Choisir un fichier
-                      </label>
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleUpload(contract.id)}
-                        disabled={!selectedFile || uploadMutation.isPending}
-                      >
-                        {uploadMutation.isPending ? "Téléversement..." : "Téléverser"}
-                      </Button>
-                    </TableCell>
+                    <TableCell>{contract.duration_months} mois</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -135,7 +65,9 @@ export const ManageContractsDialog = ({ userId, open, onOpenChange }: ManageCont
         )}
       </div>
       <DialogFooter>
-        <Button variant="secondary" onClick={() => onOpenChange(false)}>Fermer</Button>
+        <DialogClose asChild>
+          <Button variant="secondary">Fermer</Button>
+        </DialogClose>
       </DialogFooter>
     </DialogContent>
   );

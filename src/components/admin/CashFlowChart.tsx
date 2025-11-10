@@ -11,7 +11,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatCompactNumber } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const CashFlowChart = () => {
@@ -28,10 +28,10 @@ export const CashFlowChart = () => {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Flux de Trésorerie (12 derniers mois)</CardTitle>
+          <CardTitle>Flux de Transactions (12 derniers mois)</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-[300px]">
-          <p className="text-muted-foreground">Aucune donnée de flux de trésorerie disponible.</p>
+          <p className="text-muted-foreground">Aucune donnée de flux de transactions (12 derniers mois) disponible.</p>
         </CardContent>
       </Card>
     );
@@ -46,14 +46,14 @@ export const CashFlowChart = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Flux de Trésorerie (12 derniers mois)</CardTitle>
+        <CardTitle>Flux de Transactions (12 derniers mois)</CardTitle>
       </CardHeader>
       <CardContent className="pl-2">
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#242629" />
             <XAxis dataKey="month" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-            <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${formatCurrency(value)}`} />
+            <YAxis stroke="#a1a1aa" fontSize={13} tickLine={false} axisLine={false} tickFormatter={(value) => formatCompactNumber(value)} />
             <Tooltip
               contentStyle={{ backgroundColor: "#1A1A1D", border: "none", borderRadius: "8px" }}
               labelStyle={{ color: "#EAEAEA" }}

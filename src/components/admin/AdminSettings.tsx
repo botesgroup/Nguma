@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getSettings, updateSetting, uploadGenericContractPdf } from "@/services/settingsService";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,10 +8,66 @@ import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect } from "react";
 import { Upload } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Database } from "@/integrations/supabase/types";
 
-type Setting = {
-  key: string;
-  value: string;
+type Setting = Database['public']['Tables']['settings']['Row'];
+
+// A new component to render the correct form control based on the setting type
+const SettingControl = ({ setting, handleInputChange, handleSave, mutation }: { setting: Setting, handleInputChange: (key: string, value: string) => void, handleSave: (key: string) => void, mutation: any }) => {
+  switch (setting.type) {
+    case 'boolean':
+      return (
+        <div className="flex items-center gap-2 w-1/3 justify-end">
+          <Switch
+            checked={setting.value === 'true'}
+            onCheckedChange={(checked) => {
+              // For switches, it's better UX to save immediately
+              const newValue = checked.toString();
+              handleInputChange(setting.key, newValue);
+              mutation.mutate({ key: setting.key, value: newValue });
+            }}
+          />
+        </div>
+      );
+    case 'select':
+      return (
+        <div className="flex items-center gap-2 w-1/3">
+          <Select
+            value={setting.value ?? ""}
+            onValueChange={(value) => handleInputChange(setting.key, value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Sélectionner..." />
+            </SelectTrigger>
+            <SelectContent>
+              {setting.options?.map(option => (
+                <SelectItem key={option} value={option}>{option}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button onClick={() => handleSave(setting.key)} disabled={mutation.isPending && mutation.variables?.key === setting.key}>
+            Sauvegarder
+          </Button>
+        </div>
+      );
+    case 'number':
+    default: // 'text' and others
+      return (
+        <div className="flex items-center gap-2 w-1/3">
+          <Input
+            id={setting.key}
+            type={setting.type === 'number' ? 'number' : 'text'}
+            value={setting.value ?? ""}
+            onChange={(e) => handleInputChange(setting.key, e.target.value)}
+          />
+          <Button onClick={() => handleSave(setting.key)} disabled={mutation.isPending && mutation.variables?.key === setting.key}>
+            Sauvegarder
+          </Button>
+        </div>
+      );
+  }
 };
 
 export const AdminSettings = () => {
@@ -66,7 +121,7 @@ export const AdminSettings = () => {
   const handleSave = (key: string) => {
     const settingToSave = settingsState.find(s => s.key === key);
     if (settingToSave) {
-      mutation.mutate(settingToSave);
+      mutation.mutate({ key: settingToSave.key, value: settingToSave.value ?? "" });
     }
   };
 
@@ -112,18 +167,14 @@ export const AdminSettings = () => {
           <div key={setting.key} className="flex items-center justify-between gap-4">
             <div>
               <Label htmlFor={setting.key} className="capitalize font-medium">{setting.key.replace(/_/g, ' ')}</Label>
-              <p className="text-sm text-muted-foreground">{settings?.find(s => s.key === setting.key)?.description}</p>
+              <p className="text-sm text-muted-foreground">{setting.description}</p>
             </div>
-            <div className="flex items-center gap-2 w-1/3">
-              <Input
-                id={setting.key}
-                value={setting.value}
-                onChange={(e) => handleInputChange(setting.key, e.target.value)}
-              />
-              <Button onClick={() => handleSave(setting.key)} disabled={mutation.isPending && mutation.variables?.key === setting.key}>
-                Sauvegarder
-              </Button>
-            </div>
+            <SettingControl 
+              setting={setting} 
+              handleInputChange={handleInputChange} 
+              handleSave={handleSave} 
+              mutation={mutation} 
+            />
           </div>
         ))}
 

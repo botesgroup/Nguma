@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getPendingWithdrawals, approveWithdrawal, rejectWithdrawal } from "@/services/adminService";
@@ -11,7 +10,9 @@ import { formatCurrency } from "@/lib/utils";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Copy } from "lucide-react";
+import { Copy, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { CreditUserDialog } from "./CreditUserDialog";
 
 type ActionType = "approve" | "reject";
 interface DialogState {
@@ -19,12 +20,15 @@ interface DialogState {
   action?: ActionType;
   transactionId?: string;
 }
+type SelectedUser = { id: string; email: string; };
 
 export const PendingWithdrawals = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dialogState, setDialogState] = useState<DialogState>({ isOpen: false });
   const [rejectionReason, setRejectionReason] = useState("");
+  const [isCreditUserOpen, setIsCreditUserOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
 
   const { data: withdrawals, isLoading } = useQuery({
     queryKey: ["pendingWithdrawals"],
@@ -35,14 +39,9 @@ export const PendingWithdrawals = () => {
     mutationFn: approveWithdrawal,
     onSuccess: () => {
       toast({ title: "Succès", description: "Retrait approuvé." });
-      queryClient.invalidateQueries({ queryKey: ['pendingWithdrawals'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['wallets'] });
-      queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
+      queryClient.invalidateQueries({ queryKey: ['pendingWithdrawals', 'notifications', 'wallets', 'recentTransactions', 'adminStats'] });
     },
-    onError: (error) => {
-      toast({ variant: "destructive", title: "Erreur", description: error.message });
-    },
+    onError: (error) => toast({ variant: "destructive", title: "Erreur", description: error.message }),
     onSettled: () => closeDialog(),
   });
 
@@ -50,27 +49,17 @@ export const PendingWithdrawals = () => {
     mutationFn: ({ transactionId, reason }: { transactionId: string; reason: string }) => rejectWithdrawal(transactionId, reason),
     onSuccess: () => {
       toast({ title: "Succès", description: "Retrait rejeté." });
-      queryClient.invalidateQueries({ queryKey: ['pendingWithdrawals'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['pendingWithdrawals', 'notifications', 'adminStats'] });
     },
-    onError: (error) => {
-      toast({ variant: "destructive", title: "Erreur", description: error.message });
-    },
+    onError: (error) => toast({ variant: "destructive", title: "Erreur", description: error.message }),
     onSettled: () => closeDialog(),
   });
 
-  const openDialog = (action: ActionType, transactionId: string) => {
-    setDialogState({ isOpen: true, action, transactionId });
-  };
-
-  const closeDialog = () => {
-    setDialogState({ isOpen: false });
-    setRejectionReason("");
-  };
+  const openDialog = (action: ActionType, transactionId: string) => setDialogState({ isOpen: true, action, transactionId });
+  const closeDialog = () => { setDialogState({ isOpen: false }); setRejectionReason(""); };
 
   const handleConfirm = () => {
     if (!dialogState.transactionId || !dialogState.action) return;
-
     if (dialogState.action === "approve") {
       approveMutation.mutate(dialogState.transactionId);
     } else if (dialogState.action === "reject") {
@@ -123,40 +112,30 @@ export const PendingWithdrawals = () => {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-xs">{w.profile?.phone || "N/A"}</span>
-                          {w.profile?.phone && (
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopyToClipboard(w.profile?.phone || "")}>
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          )}
+                          {w.profile?.phone && (<Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopyToClipboard(w.profile?.phone || "")}><Copy className="h-3 w-3" /></Button>)}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">{formatCurrency(Number(w.amount), w.currency)}</TableCell>
                       <TableCell className="text-center">
-                        <div className="flex gap-2 justify-center">
-                          <Button 
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openDialog("approve", w.id)}
-                            disabled={isActionPending}
-                          >
-                            Approuver
-                          </Button>
-                          <Button 
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => openDialog("reject", w.id)}
-                            disabled={isActionPending}
-                          >
-                            Rejeter
-                          </Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Ouvrir le menu</span><MoreHorizontal className="h-4 w-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => openDialog("approve", w.id)}>Approuver</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openDialog("reject", w.id)}>Rejeter</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => { setSelectedUser({ id: w.user_id, email: w.profile?.email || 'N/A' }); setIsCreditUserOpen(true); }}>
+                              Créditer l'utilisateur
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center h-24">Aucun retrait en attente.</TableCell>
-                  </TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center h-24">Aucun retrait en attente.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
@@ -168,31 +147,21 @@ export const PendingWithdrawals = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {dialogState.action === "approve" 
-                ? "Cette action approuvera la demande de retrait. L'utilisateur en sera notifié et son solde sera ajusté."
-                : "Cette action rejettera la demande de retrait. L'utilisateur en sera notifié."}
-            </AlertDialogDescription>
+            <AlertDialogDescription>{dialogState.action === "approve" ? "Cette action approuvera la demande de retrait. L'utilisateur en sera notifié et son solde sera ajusté." : "Cette action rejettera la demande de retrait. L'utilisateur en sera notifié."}</AlertDialogDescription>
           </AlertDialogHeader>
-          {dialogState.action === "reject" && (
-            <div className="grid gap-2 py-4">
-              <Label htmlFor="reason">Raison du rejet</Label>
-              <Input 
-                id="reason" 
-                value={rejectionReason} 
-                onChange={(e) => setRejectionReason(e.target.value)} 
-                placeholder="Ex: Informations de paiement invalides"
-              />
-            </div>
-          )}
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={closeDialog} disabled={isActionPending}>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirm} disabled={isActionPending}>
-              {isActionPending ? "En cours..." : "Confirmer"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
+          {dialogState.action === "reject" && (<div className="grid gap-2 py-4"><Label htmlFor="reason">Raison du rejet</Label><Input id="reason" value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} placeholder="Ex: Informations de paiement invalides" /></div>)}
+          <AlertDialogFooter><AlertDialogCancel onClick={closeDialog} disabled={isActionPending}>Annuler</AlertDialogCancel><AlertDialogAction onClick={handleConfirm} disabled={isActionPending}>{isActionPending ? "En cours..." : "Confirmer"}</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {selectedUser && (
+        <CreditUserDialog 
+          userId={selectedUser.id}
+          userEmail={selectedUser.email}
+          open={isCreditUserOpen}
+          onOpenChange={setIsCreditUserOpen}
+        />
+      )}
     </>
   );
 };

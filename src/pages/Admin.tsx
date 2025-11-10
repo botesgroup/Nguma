@@ -5,6 +5,7 @@ import { getAdminDashboardStats } from "@/services/adminService";
 import { formatCurrency } from "@/lib/utils";
 import { AdminProfitChart } from "@/components/admin/AdminProfitChart";
 import { CashFlowChart } from "@/components/admin/CashFlowChart";
+import { UserGrowthChart } from "@/components/admin/UserGrowthChart";
 import { InvestorListTable } from "@/components/admin/InvestorListTable";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,6 +42,13 @@ const AdminPage = () => {
           queryClient.invalidateQueries({ queryKey: ['cashFlowSummary'] });
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'auth', table: 'users' },
+        (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['userGrowthSummary'] });
+        }
+      )
       .subscribe();
 
     // Cleanup subscription on component unmount
@@ -75,8 +83,11 @@ const AdminPage = () => {
         <div className="lg:col-span-1">
           <AdminProfitChart />
         </div>
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-1">
           <CashFlowChart />
+        </div>
+        <div className="lg:col-span-1">
+          <UserGrowthChart />
         </div>
       </div>
 
