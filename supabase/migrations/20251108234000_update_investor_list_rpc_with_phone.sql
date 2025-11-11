@@ -12,7 +12,7 @@ SECURITY DEFINER
 AS $$
 DECLARE
     v_offset INT;
-    v_investors JSON;
+    v_investors JSONB; -- Changed from JSON to JSONB
     v_total_count BIGINT;
 BEGIN
     -- Ensure the caller is an admin

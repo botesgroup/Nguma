@@ -42,23 +42,22 @@ export const createContract = async (amount: number) => {
 };
 
 /**
- * Executes an early refund for a specific contract.
+ * Requests an early refund for a specific contract.
  */
-export const refundContract = async (contractId: string) => {
+export const requestRefund = async (contractId: string) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("User not authenticated.");
 
-  const { data, error } = await supabase.rpc('execute_refund', {
-    _contract_id: contractId,
-    _user_id: user.id
+  const { data, error } = await supabase.rpc('request_refund', {
+    _contract_id: contractId
   });
 
   if (error) {
-    console.error("Error executing refund:", error.message);
-    throw new Error("Failed to execute refund.");
+    console.error("Error requesting refund:", error.message);
+    throw new Error("Failed to request refund.");
   }
   if (data && !data.success) {
-    throw new Error(data.error || "An unknown error occurred during the refund process.");
+    throw new Error(data.error || "An unknown error occurred during the refund request process.");
   }
   return data;
 };

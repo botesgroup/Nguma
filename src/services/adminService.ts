@@ -185,3 +185,53 @@ export const rejectWithdrawal = async (transactionId: string, reason: string) =>
   if (data && !data.success) throw new Error(data.error);
   return data;
 };
+
+// --- Contract Management ---
+export const adminGetAllContracts = async (
+  searchQuery: string = '',
+  statusFilter: string = 'all',
+  page: number = 1,
+  pageSize: number = 10
+) => {
+  const { data, error } = await supabase.rpc('admin_get_all_contracts', {
+    p_search_query: searchQuery,
+    p_status_filter: statusFilter,
+    p_page_num: page,
+    p_page_size: pageSize,
+  });
+
+  // The RPC returns a single JSON object with 'data' and 'count' keys.
+  return data;
+};
+
+// --- Refund Management ---
+export const getPendingRefunds = async () => {
+  const { data, error } = await supabase.rpc('get_pending_refunds');
+
+  if (error) {
+    console.error("Error fetching pending refunds:", error);
+    throw new Error("Could not fetch pending refunds.");
+  }
+  return data || [];
+};
+
+export const approveRefund = async (contractId: string) => {
+  const { data, error } = await supabase.rpc('approve_refund', { _contract_id: contractId });
+  if (error) throw new Error(error.message);
+  if (data && !data.success) throw new Error(data.error || "An unknown error occurred.");
+  return data;
+};
+
+export const rejectRefund = async (contractId: string, reason: string) => {
+  const { data, error } = await supabase.rpc('reject_refund', { _contract_id: contractId, reason: reason });
+  if (error) throw new Error(error.message);
+  if (data && !data.success) throw new Error(data.error || "An unknown error occurred.");
+  return data;
+};
+
+export const adminUpdateContract = async (contractId: string, updates: Record<string, any>) => {
+  const { data, error } = await supabase.rpc('admin_update_contract', { _contract_id: contractId, _updates: updates });
+  if (error) throw new Error(error.message);
+  if (data && !data.success) throw new Error(data.error || "An unknown error occurred.");
+  return data;
+};

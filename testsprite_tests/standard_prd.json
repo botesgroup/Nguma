@@ -1,0 +1,145 @@
+{
+  "meta": {
+    "project": "Nguma Investment Platform",
+    "date": "2025-11-04",
+    "prepared_by": "Software Development Manager"
+  },
+  "product_overview": "Nguma is a private investment platform that enables investors to deposit funds, subscribe to investment contracts, and receive monthly profits. It provides a comprehensive admin dashboard to manage users, transactions, contracts, and platform settings, tailored for both investors and administrators.",
+  "core_goals": [
+    "Allow investors to securely create accounts, manage profiles, and handle their investment portfolios including deposits, withdrawals, and contracts.",
+    "Provide a seamless admin experience to oversee investors, approve or reject transactions, manage contracts, and maintain platform integrity.",
+    "Ensure robust role-based access control to protect sensitive operations and data.",
+    "Maintain accurate and real-time updates on user wallets and contracts reflecting all financial activities.",
+    "Enable transparent and efficient request and notification flows for deposits, withdrawals, and refund demands."
+  ],
+  "key_features": [
+    "Secure authentication flow with mandatory profile completion post-registration for investors.",
+    "Investor wallet management showing total balance, invested balance, and profit balance.",
+    "Investment contract lifecycle management including creation, viewing, state tracking, and early refund requests.",
+    "Role-based routing and layout with protected routes for investor and admin areas.",
+    "Admin dashboard with global statistics and detailed management pages for investors, transactions, contracts, refunds, and platform settings.",
+    "Notification system for critical user actions such as approvals/rejections and profit disbursements.",
+    "Admin functionalities to approve/reject deposits, withdrawals, and refund requests with RPC integration.",
+    "Logical deletion of contracts by setting status to cancelled through admin tools.",
+    "Contextual sidebar and navigation adapting to user roles with alert badges for unread items.",
+    "Detailed validation rules for all critical business logic to prevent invalid operations."
+  ],
+  "user_flow_summary": [
+    "New user signs up and is automatically assigned the 'investor' role, profile and wallet are created.",
+    "Upon first login, user is prompted to complete profile before accessing other features.",
+    "Investor deposits funds by submitting a request; after admin approval, funds are added to the main balance.",
+    "Investor requests withdrawal from profit balance; admin reviews and approves or rejects the request accordingly.",
+    "Investor creates investment contracts using available main balance, shifting funds to invested balance.",
+    "Investor may request early refund on active contracts if less than 5 months of profits paid; refund amount is calculated and submitted for admin approval.",
+    "Admin reviews all pending deposits, withdrawals, and refunds; processes approvals or rejections with appropriate notifications sent to users.",
+    "Admin manages users, edits profiles, views detailed contract and transaction data, and updates contract statuses as needed.",
+    "Admin accesses role-specific sections through a protected layout; sidebar dynamically updates based on user role and alert states."
+  ],
+  "validation_criteria": [
+    "Withdrawals must not exceed the profit balance of the user.",
+    "Investments cannot exceed the user's main available balance.",
+    "Refund requests only allowed if the contract has fewer than 5 months of profits paid.",
+    "Refund amount equals contract amount minus total profits already paid.",
+    "Wallet balances (total, invested, profit) are accurately updated after every financial operation.",
+    "Non-admin users cannot access administrative routes and features.",
+    "User profile must be completed before accessing main application features.",
+    "Contract status updates and deletions adhere strictly to allowed state transitions and business rules.",
+    "All notifications for approvals, rejections and profit payments are correctly delivered to respective users.",
+    "Role-based UI adapts correctly showing admin features only to admins with appropriate alert badge updates."
+  ],
+  "code_summary": {
+    "tech_stack": [
+      "TypeScript",
+      "React",
+      "Vite",
+      "React Router",
+      "@tanstack/react-query",
+      "Tailwind CSS",
+      "Radix UI / shadcn-ui",
+      "Supabase (PostgreSQL)",
+      "date-fns",
+      "Lucide"
+    ],
+    "features": [
+      {
+        "name": "Routing sécurisé et layout principal",
+        "description": "Configuration du routage avec gardes d’authentification (ProtectedRoute) et d’administration (AdminRoute), utilisant un layout commun avec barre latérale et en-tête.",
+        "files": [
+          "src/App.tsx"
+        ]
+      },
+      {
+        "name": "Routes utilisateur protégées",
+        "description": "Pages protégées pour Dashboard, Contracts, Wallet, Transactions, Profile rendues à l’intérieur du layout.",
+        "files": [
+          "src/App.tsx"
+        ]
+      },
+      {
+        "name": "Routes d’administration protégées",
+        "description": "Pages Admin protégées: tableau de bord, dépôts, retraits, remboursements, gestion des contrats, utilisateurs, paramètres et contrats utilisateur.",
+        "files": [
+          "src/App.tsx"
+        ]
+      },
+      {
+        "name": "Barre latérale basée sur le rôle",
+        "description": "Affichage conditionnel des éléments d’administration en fonction du rôle Supabase de l’utilisateur, avec badges d’alertes non lues par lien.",
+        "files": [
+          "src/components/AppSidebar.tsx"
+        ]
+      },
+      {
+        "name": "Carte contrat avec demande de remboursement",
+        "description": "Carte de contrat affichant statut, progression, téléchargement du PDF et déclenchement d’une demande de remboursement anticipé avec calculs et validation.",
+        "files": [
+          "src/components/ContractCard.tsx",
+          "src/services/contractService.ts"
+        ]
+      },
+      {
+        "name": "Téléchargement PDF du contrat",
+        "description": "Ouverture d’un PDF de contrat spécifique ou générique depuis les paramètres.",
+        "files": [
+          "src/components/ContractCard.tsx"
+        ]
+      },
+      {
+        "name": "Statut contrat 'pending_refund'",
+        "description": "Gestion d’un statut additionnel pour affichage de badge lorsque le remboursement est en attente.",
+        "files": [
+          "src/components/ContractCard.tsx"
+        ]
+      },
+      {
+        "name": "Lien vers contrats de l’utilisateur depuis la liste des investisseurs",
+        "description": "Action de contexte permettant de naviguer vers la page des contrats d’un utilisateur spécifique.",
+        "files": [
+          "src/components/admin/InvestorListTable.tsx"
+        ]
+      },
+      {
+        "name": "Actions admin retraits et remboursements",
+        "description": "Fonctions d’approbation/rejet des retraits et des remboursements côté admin via RPC Supabase.",
+        "files": [
+          "src/services/adminService.ts"
+        ]
+      },
+      {
+        "name": "Mise à jour contrat côté admin",
+        "description": "Mise à jour d’un contrat via une RPC dédiée.",
+        "files": [
+          "src/services/adminService.ts"
+        ]
+      },
+      {
+        "name": "RPC liste investisseurs avec téléphone",
+        "description": "Fonction RPC `get_investor_list_details` mise à jour pour renvoyer le champ phone et utiliser JSONB.",
+        "files": [
+          "supabase/migrations/20251108234000_update_investor_list_rpc_with_phone.sql",
+          "src/services/adminService.ts"
+        ]
+      }
+    ]
+  }
+}

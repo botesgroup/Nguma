@@ -16,7 +16,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { refundContract } from "@/services/contractService";
+import { requestRefund } from "@/services/contractService"; // Changed import
 import { getSettings } from "@/services/settingsService";
 import { useToast } from "@/components/ui/use-toast";
 import { AlertTriangle, Download } from "lucide-react";
@@ -42,11 +42,11 @@ export const ContractCard = ({ contract, formatCurrency }: ContractCardProps) =>
   const pdfToDownload = contract.contract_pdf_url || genericContractPdfUrl;
 
   const mutation = useMutation({
-    mutationFn: refundContract,
+    mutationFn: requestRefund, // Changed mutationFn
     onSuccess: (data) => {
       toast({
         title: "Succès",
-        description: `Remboursement de ${formatCurrency(data.refund_amount)} effectué.`,
+        description: `Demande de remboursement pour le contrat #${contract.id.substring(0, 8)} soumise.`, // Changed message
       });
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
       queryClient.invalidateQueries({ queryKey: ['wallets'] });
@@ -56,7 +56,7 @@ export const ContractCard = ({ contract, formatCurrency }: ContractCardProps) =>
     onError: (error) => {
       toast({
         variant: "destructive",
-        title: "Erreur de remboursement",
+        title: "Erreur de demande de remboursement",
         description: error.message,
       });
     },
@@ -67,13 +67,15 @@ export const ContractCard = ({ contract, formatCurrency }: ContractCardProps) =>
   };
 
   const progress = (contract.months_paid / contract.duration_months) * 100;
-  const refundAmount = Math.max(0, Number(contract.amount) - Number(contract.total_profit_paid));
+  const totalProfitPaid = Number(contract.total_profit_paid) || 0;
+  const refundAmount = Math.max(0, Number(contract.amount) - totalProfitPaid);
 
   const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case 'active': return 'default';
       case 'completed': return 'secondary';
       case 'refunded': return 'destructive';
+      case 'pending_refund': return 'outline'; // Added pending_refund status
       default: return 'outline';
     }
   };
@@ -109,6 +111,9 @@ export const ContractCard = ({ contract, formatCurrency }: ContractCardProps) =>
           onClick={() => {
             if (pdfToDownload) {
               window.open(pdfToDownload, "_blank");
+              toast({
+                title: "Contract Download Successful",
+              });
             }
           }}
         >
@@ -116,7 +121,12 @@ export const ContractCard = ({ contract, formatCurrency }: ContractCardProps) =>
         </Button>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-yellow-500 hover:bg-yellow-500/20" disabled={contract.status !== 'active' || contract.months_paid >= 5}>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-yellow-500 hover:bg-yellow-500/20" 
+              disabled={contract.status !== 'active' || contract.months_paid >= 5 || mutation.isPending} // Disable if already pending or mutation is running
+            >
               <AlertTriangle className="h-5 w-5" />
             </Button>
           </DialogTrigger>
@@ -124,20 +134,24 @@ export const ContractCard = ({ contract, formatCurrency }: ContractCardProps) =>
             <DialogHeader>
               <DialogTitle>Demande de Remboursement Anticipé</DialogTitle>
               <DialogDescription>
-                Veuillez vérifier le calcul ci-dessous avant de confirmer. Cette action est irréversible.
+                Veuillez vérifier le calcul ci-dessous avant de soumettre votre demande.
               </DialogDescription>
             </DialogHeader>
             <div className="my-4 space-y-2 text-sm">
               <div className="flex justify-between"><span>Montant investi :</span> <span className="font-medium">{formatCurrency(Number(contract.amount))}</span></div>
-              <div className="flex justify-between"><span>Profits déjà versés :</span> <span className="font-medium text-destructive">- {formatCurrency(Number(contract.total_profit_paid))}</span></div>
+              <div className="flex justify-between"><span>Profits déjà versés :</span> <span className="font-medium text-destructive">- {formatCurrency(totalProfitPaid)}</span></div>
               <hr className="my-2 border-border" />
               <div className="flex justify-between text-base"><strong>Montant qui sera remboursé :</strong> <strong className="text-primary">{formatCurrency(refundAmount)}</strong></div>
             </div>
-            <DialogFooter>
-              <Button variant="secondary" onClick={() => setIsDialogOpen(false)}>Annuler</Button>
-              <Button variant="destructive" onClick={handleRefund} disabled={mutation.isPending}>
-                {mutation.isPending ? "Confirmation..." : "Confirmer le remboursement"}
+            <DialogFooter className="flex flex-col items-center gap-4 pt-4">
+              <Button 
+                onClick={handleRefund} 
+                disabled={mutation.isPending} 
+                className="w-full sm:w-auto"
+              >
+                {mutation.isPending ? "Soumission en cours..." : "Soumettre la demande"}
               </Button>
+              <Button variant="secondary" onClick={() => setIsDialogOpen(false)} className="w-full sm:w-auto">Annuler</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

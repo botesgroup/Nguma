@@ -26,6 +26,8 @@ const adminItems = [
   { title: "Admin Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Dépôts en attente", url: "/admin/deposits", icon: FileText },
   { title: "Retraits en attente", url: "/admin/withdrawals", icon: FileText },
+  { title: "Remboursements en attente", url: "/admin/refunds", icon: FileText },
+  { title: "Gestion Contrats", url: "/admin/contracts", icon: FileText },
   { title: "Utilisateurs", url: "/admin/users", icon: Users },
   { title: "Paramètres", url: "/admin/settings", icon: Settings },
 ];

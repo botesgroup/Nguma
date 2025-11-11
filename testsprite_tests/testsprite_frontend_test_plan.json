@@ -1,0 +1,406 @@
+[
+  {
+    "id": "TC001",
+    "title": "Investor registration and profile completion flow",
+    "description": "Verify that a new user who registers is assigned the 'investor' role, their profile and wallet are created, and they are forced to complete the profile before accessing other features.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the registration page"
+      },
+      {
+        "type": "action",
+        "description": "Submit a valid registration form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the user is assigned the 'investor' role"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify profile and wallet are created in backend"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to navigate to main dashboard without completing profile"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user is prompted to complete profile before accessing main features"
+      },
+      {
+        "type": "action",
+        "description": "Complete the profile form and submit"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user is allowed access to main dashboard and protected investor routes"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Access control for protected investor routes",
+    "description": "Ensure investor-only pages (Dashboard, Contracts, Wallet, Transactions, Profile) are inaccessible to unauthenticated users and users without completed profiles.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt to access protected investor route as unauthenticated user"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify redirect to login page"
+      },
+      {
+        "type": "action",
+        "description": "Log in as investor with incomplete profile"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to access protected investor route"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify forced profile completion prompt before route access"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Role-based routing and layout for admin routes",
+    "description": "Verify only users with admin role can access admin routes (dashboard, deposits, withdrawals, refunds, contracts, users, settings), and others are denied access.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in as investor user"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to navigate to admin-only routes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access is denied or redirected to unauthorized page"
+      },
+      {
+        "type": "action",
+        "description": "Log in as admin user"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to admin dashboard and other admin pages"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify pages load successfully with admin layout"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Sidebar displays conditional admin elements and alert badges",
+    "description": "Verify that the sidebar dynamically shows admin navigation elements only for admin users and updates alert badges for unread items correctly.",
+    "category": "ui",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in as investor user"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify sidebar does not show admin menu items"
+      },
+      {
+        "type": "action",
+        "description": "Log in as admin user with some unread alerts"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify sidebar displays admin menu items"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify alert badges accurately reflect unread counts"
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Investor deposits funds flow including admin approval",
+    "description": "Test the entire flow of an investor submitting a deposit request, admin approving the request, and funds added to investor's main balance wallet with related notifications.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Investor submits a new deposit request with a valid amount"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify deposit request is stored with pending status"
+      },
+      {
+        "type": "action",
+        "description": "Admin logs in and views pending deposits"
+      },
+      {
+        "type": "action",
+        "description": "Admin approves the deposit request"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify deposit status updated to approved"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify investor's wallet main balance is increased accordingly"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify investor receives notification of approval"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Investor withdrawal request and admin approval/rejection flow",
+    "description": "Validate that investor withdrawal requests can only be made from profit balance, admin can approve or reject requests, and wallet balances and notifications update accordingly.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Investor submits withdrawal request from profit balance (amount ≤ profit balance)"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify withdrawal request saved with pending status"
+      },
+      {
+        "type": "action",
+        "description": "Admin reviews and approves the withdrawal request"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify profit balance decreased by withdrawal amount"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify investor notified of approval"
+      },
+      {
+        "type": "action",
+        "description": "Investor submits withdrawal request exceeding profit balance"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation error preventing request submission"
+      },
+      {
+        "type": "action",
+        "description": "Admin rejects a pending withdrawal request"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify withdrawal status updated to rejected"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify investor notified of rejection"
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Investment contract creation and wallet balance update",
+    "description": "Verify that investor can create investment contracts using available main balance, that invested balance increases properly, and main balance decreases accordingly.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Investor navigates to the contract creation page"
+      },
+      {
+        "type": "action",
+        "description": "Create a new investment contract for an amount ≤ main balance"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify contract is created with active status"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify invested balance increases by contract amount"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify main balance decreases by contract amount"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to create a contract exceeding available main balance"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation error preventing contract creation"
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Early refund request validations and admin approval",
+    "description": "Ensure refund requests are only allowed if less than 5 months of profits paid, refund amount equals contract amount minus profits paid, and admin can approve or reject refund requests.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Investor attempts early refund request on contract with fewer than 5 months profits paid"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify refund request is successfully submitted with calculated refund amount"
+      },
+      {
+        "type": "action",
+        "description": "Investor attempts refund request on contract with 5 or more months profits paid"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation error preventing refund request"
+      },
+      {
+        "type": "action",
+        "description": "Admin reviews pending refund requests"
+      },
+      {
+        "type": "action",
+        "description": "Admin approves a refund request"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify contract status updates to reflect 'pending_refund' if applicable"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify investor notified of refund approval"
+      },
+      {
+        "type": "action",
+        "description": "Admin rejects a refund request"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify refund status updated to rejected and investor notified"
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Admin contract status update and logical deletion",
+    "description": "Validate that admin can update the status of investment contracts (including cancellation), and that cancelled contracts are logically deleted by status change only.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Admin selects a contract to update"
+      },
+      {
+        "type": "action",
+        "description": "Admin updates contract status to active, completed, or cancelled"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify contract status updates correctly in backend"
+      },
+      {
+        "type": "assertion",
+        "description": "If set to cancelled, verify contract remains in database but excluded from active lists"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Download contract PDF functionality",
+    "description": "Verify investor and admin can open/download specific or generic PDF documents of contracts from contract cards or settings pages.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to a contract card with download PDF option"
+      },
+      {
+        "type": "action",
+        "description": "Click on download PDF link/button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the correct contract PDF opens or downloads"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Investor list admin RPC with phone field and JSONB format",
+    "description": "Verify that the updated admin RPC 'get_investor_list_details' returns investor list with phone numbers included and formatted using JSONB.",
+    "category": "integration",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Admin calls the 'get_investor_list_details' RPC"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the returned list includes phone numbers for each investor"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the data format is JSONB as expected"
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Admin approval/rejection RPC calls for withdrawals and refunds",
+    "description": "Test that admin actions to approve or reject withdrawal and refund requests properly invoke the respective RPCs and update the system state and user notifications.",
+    "category": "integration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Admin approves a withdrawal request invoking the RPC"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify RPC call completes successfully and withdrawal status changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify investor notified of approval"
+      },
+      {
+        "type": "action",
+        "description": "Admin rejects a refund request invoking the RPC"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify RPC call completes successfully and refund status changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify investor notified of rejection"
+      }
+    ]
+  }
+]

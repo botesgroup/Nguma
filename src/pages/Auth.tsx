@@ -136,10 +136,12 @@ const Auth = () => {
       <div className="w-full max-w-md">
         {/* Logo & Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-primary mb-4 shadow-glow">
-            <TrendingUp className="w-8 h-8 text-background" />
-          </div>
-          <h1 className="text-3xl font-bold mb-2">NGUMA</h1>
+          <img
+            src="/logo.png"
+            alt="Nguma"
+            className="mx-auto h-18 w-auto rounded-md shadow-sm"
+          />
+          <h1 className="text-3xl font-bold mt-3 mb-2">NGUMA</h1>
           <p className="text-muted-foreground">Plateforme d'investissement automatisé</p>
         </div>
 

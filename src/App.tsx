@@ -21,9 +21,12 @@ import UsersPage from "./pages/admin/UsersPage";
 import SettingsPage from "./pages/admin/SettingsPage";
 import PendingDepositsPage from "./pages/admin/PendingDepositsPage";
 import PendingWithdrawalsPage from "./pages/admin/PendingWithdrawalsPage";
+import PendingRefundsPage from "./pages/admin/PendingRefundsPage";
+import AdminContractsPage from "./pages/admin/Contracts";
 import AdminUserContractsPage from "./pages/admin/AdminUserContractsPage";
 import HowItWorksPage from "./pages/HowItWorks";
 import ProfilePage from "./pages/Profile";
+import Logout from "./pages/Logout";
 import { ProfileCompletionGuard } from "./components/ProfileCompletionGuard";
 
 const queryClient = new QueryClient();
@@ -154,7 +157,27 @@ const App = () => (
             }
           />
           <Route
+            path="/admin/refunds"
+            element={
+              <AdminRoute>
+                <AppLayout>
+                  <PendingRefundsPage />
+                </AppLayout>
+              </AdminRoute>
+            }
+          />
+          <Route
             path="/admin/contracts"
+            element={
+              <AdminRoute>
+                <AppLayout>
+                  <AdminContractsPage />
+                </AppLayout>
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/user-contracts"
             element={
               <AdminRoute>
                 <AppLayout>
@@ -163,6 +186,7 @@ const App = () => (
               </AdminRoute>
             }
           />
+          <Route path="/logout" element={<Logout />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

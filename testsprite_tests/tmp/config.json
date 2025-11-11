@@ -1,0 +1,18 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "diff",
+  "localEndpoint": "http://localhost:8080",
+  "loginUser": "manassembemba2003@gmail.com",
+  "loginPassword": "2003Manasse",
+  "executionArgs": {
+    "projectName": "blackrock-trader-pro-main",
+    "projectPath": "C:\\Users\\MANASSE MBEMBA\\Documents\\blackrock-trader-pro-main\\blackrock-trader-pro-main",
+    "testIds": [],
+    "additionalInstruction": "",
+    "envs": {
+      "API_KEY": "sk-user-qwN5hjs6w2HiFTXeIV3qo6xMlGCbUJyPEZEcMSDyH-c0t6uzNM1x_KJuV6hggfItqpan3x7hP1vygjJcUB_vWzLXV0cyBkJtqqmQ4MNtyOHzOgcgp8qxqpMteQIlAafzQsA"
+    }
+  },
+  "proxy": "http://82481317-dde7-4694-ba90-4aa7108da2bb:OoVDJCbmmvVtSkGhXjgcZCUdO0Zh3Gvc@tun.testsprite.com:8080"
+}

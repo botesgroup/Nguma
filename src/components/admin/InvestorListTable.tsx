@@ -146,7 +146,7 @@ export const InvestorListTable = () => {
                           <DropdownMenuContent align="end">
                             <Dialog><DialogTrigger asChild><DropdownMenuItem onSelect={(e) => e.preventDefault()}>Voir les détails</DropdownMenuItem></DialogTrigger><UserDetailDialog userId={investor.id} /></Dialog>
                             <Dialog><DialogTrigger asChild><DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4" /> Modifier</DropdownMenuItem></DialogTrigger><EditUserDialog user={investor} /></Dialog>
-                            <DropdownMenuItem onSelect={() => navigate(`/admin/contracts?userId=${investor.id}`)}>Voir les contrats</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => navigate(`/admin/user-contracts?userId=${investor.id}`)}>Voir les contrats</DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <Dialog><DialogTrigger asChild><DropdownMenuItem onSelect={(e) => e.preventDefault()}>Créditer l'utilisateur</DropdownMenuItem></DialogTrigger><CreditUserDialog userId={investor.id} userEmail={investor.email} /></Dialog>
                             <DropdownMenuSeparator />

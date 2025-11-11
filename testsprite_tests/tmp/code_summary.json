@@ -1,0 +1,173 @@
+{
+  "tech_stack": [
+    "TypeScript",
+    "React",
+    "Vite",
+    "Tailwind CSS",
+    "Radix UI",
+    "TanStack Query",
+    "Supabase (PostgreSQL)"
+  ],
+  "features": [
+    {
+      "name": "Routes d’administration pour remboursements et contrats",
+      "description": "Déclare les routes protégées pour les pages d’administration: remboursements en attente, gestion des contrats et contrats utilisateur.",
+      "files": [
+        "src/App.tsx:158-167",
+        "src/App.tsx:170-179"
+      ]
+    },
+    {
+      "name": "Entrées de navigation Admin: remboursements et contrats",
+      "description": "Ajoute les éléments de menu Admin pour accéder aux remboursements en attente et à la gestion des contrats.",
+      "files": [
+        "src/components/AppSidebar.tsx:29-30"
+      ]
+    },
+    {
+      "name": "Carte Contrat: demande de remboursement anticipé",
+      "description": "Implémente la demande de remboursement anticipé côté client avec calcul du montant remboursable, bouton d’action, et états d’UI.",
+      "files": [
+        "src/components/ContractCard.tsx:19-19",
+        "src/components/ContractCard.tsx:45-45",
+        "src/components/ContractCard.tsx:49-49",
+        "src/components/ContractCard.tsx:59-59",
+        "src/components/ContractCard.tsx:70-71",
+        "src/components/ContractCard.tsx:78-78",
+        "src/components/ContractCard.tsx:121-126",
+        "src/components/ContractCard.tsx:134-134",
+        "src/components/ContractCard.tsx:139-139",
+        "src/components/ContractCard.tsx:143-149",
+        "src/components/ContractCard.tsx:151-151"
+      ]
+    },
+    {
+      "name": "Table des investisseurs: lien vers contrats utilisateur",
+      "description": "Ajoute l’action dans le menu contextuel pour naviguer vers la page listant les contrats d’un utilisateur.",
+      "files": [
+        "src/components/admin/InvestorListTable.tsx:149-149"
+      ]
+    },
+    {
+      "name": "Services Admin: gestion des remboursements",
+      "description": "Expose les appels RPC d’approbation/rejet de remboursement et mise à jour de contrat côté administrateur.",
+      "files": [
+        "src/services/adminService.ts:188-237"
+      ]
+    },
+    {
+      "name": "Services Contrat: requête de remboursement",
+      "description": "Fonction service pour initier une demande de remboursement anticipé via RPC Supabase.",
+      "files": [
+        "src/services/contractService.ts:45-45",
+        "src/services/contractService.ts:47-47",
+        "src/services/contractService.ts:51-52",
+        "src/services/contractService.ts:56-57",
+        "src/services/contractService.ts:60-60"
+      ]
+    },
+    {
+      "name": "Migration: retour de liste investisseurs incluant téléphone",
+      "description": "Modifie l’RPC get_investor_list_details pour utiliser JSONB et inclure le champ téléphone.",
+      "files": [
+        "supabase/migrations/20251108234000_update_investor_list_rpc_with_phone.sql:15-15"
+      ]
+    }
+  ]
+}
+{
+  "tech_stack": [
+    "TypeScript",
+    "React",
+    "Vite",
+    "React Router",
+    "@tanstack/react-query",
+    "Tailwind CSS",
+    "Radix UI / shadcn-ui",
+    "Supabase (PostgreSQL)",
+    "date-fns",
+    "Lucide"
+  ],
+  "features": [
+    {
+      "name": "Routing sécurisé et layout principal",
+      "description": "Configuration du routage avec gardes d’authentification (ProtectedRoute) et d’administration (AdminRoute), utilisant un layout commun avec barre latérale et en-tête.",
+      "files": [
+        "src/App.tsx"
+      ]
+    },
+    {
+      "name": "Routes utilisateur protégées",
+      "description": "Pages protégées pour Dashboard, Contracts, Wallet, Transactions, Profile rendues à l’intérieur du layout.",
+      "files": [
+        "src/App.tsx"
+      ]
+    },
+    {
+      "name": "Routes d’administration protégées",
+      "description": "Pages Admin protégées: tableau de bord, dépôts, retraits, remboursements, gestion des contrats, utilisateurs, paramètres et contrats utilisateur.",
+      "files": [
+        "src/App.tsx"
+      ]
+    },
+    {
+      "name": "Barre latérale basée sur le rôle",
+      "description": "Affichage conditionnel des éléments d’administration en fonction du rôle Supabase de l’utilisateur, avec badges d’alertes non lues par lien.",
+      "files": [
+        "src/components/AppSidebar.tsx"
+      ]
+    },
+    {
+      "name": "Carte contrat avec demande de remboursement",
+      "description": "Carte de contrat affichant statut, progression, téléchargement du PDF et déclenchement d’une demande de remboursement anticipé avec calculs et validation.",
+      "files": [
+        "src/components/ContractCard.tsx",
+        "src/services/contractService.ts"
+      ]
+    },
+    {
+      "name": "Téléchargement PDF du contrat",
+      "description": "Ouverture d’un PDF de contrat spécifique ou générique depuis les paramètres.",
+      "files": [
+        "src/components/ContractCard.tsx"
+      ]
+    },
+    {
+      "name": "Statut contrat 'pending_refund'",
+      "description": "Gestion d’un statut additionnel pour affichage de badge lorsque le remboursement est en attente.",
+      "files": [
+        "src/components/ContractCard.tsx"
+      ]
+    },
+    {
+      "name": "Lien vers contrats de l’utilisateur depuis la liste des investisseurs",
+      "description": "Action de contexte permettant de naviguer vers la page des contrats d’un utilisateur spécifique.",
+      "files": [
+        "src/components/admin/InvestorListTable.tsx"
+      ]
+    },
+    {
+      "name": "Actions admin retraits et remboursements",
+      "description": "Fonctions d’approbation/rejet des retraits et des remboursements côté admin via RPC Supabase.",
+      "files": [
+        "src/services/adminService.ts"
+      ]
+    },
+    {
+      "name": "Mise à jour contrat côté admin",
+      "description": "Mise à jour d’un contrat via une RPC dédiée.",
+      "files": [
+        "src/services/adminService.ts"
+      ]
+    },
+    {
+      "name": "RPC liste investisseurs avec téléphone",
+      "description": "Fonction RPC `get_investor_list_details` mise à jour pour renvoyer le champ phone et utiliser JSONB.",
+      "files": [
+        "supabase/migrations/20251108234000_update_investor_list_rpc_with_phone.sql",
+        "src/services/adminService.ts"
+      ]
+    }
+  ]
+}
+

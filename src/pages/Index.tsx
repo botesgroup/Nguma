@@ -49,9 +49,7 @@ const Index = () => {
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-primary mb-8 shadow-glow">
-              <TrendingUp className="w-10 h-10 text-background" />
-            </div>
+            <img src="/logo.png" alt="Nguma Logo" className="mx-auto h-32 w-32 mb-8" />
             
             <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
               Nguma
