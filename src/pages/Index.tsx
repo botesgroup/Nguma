@@ -13,8 +13,7 @@ import {
 const faqData = [
   {
     question: "Comment la plateforme Nguma sécurise-t-elle mon investissement ?",
-    answer: "Votre investissement est sécurisé par plusieurs couches de protection. Nous utilisons l'authentification sécurisée de Supabase, et toutes les transactions financières critiques, comme les dépôts et les retraits, nécessitent une validation manuelle par un administrateur pour prévenir toute fraude.",
-  },
+            answer: "Votre investissement est protégé par des protocoles de sécurité de pointe et des systèmes d'authentification robustes. De plus, toutes les transactions financières importantes, telles que les dépôts et les retraits, sont soumises à une vérification rigoureuse par nos équipes dédiées, assurant une protection maximale contre la fraude.",  },
   {
     question: "Comment sont calculés et distribués les profits ?",
     answer: "Les profits sont calculés chaque mois en fonction du taux de rendement global fixé par l'administrateur. Notre système automatisé distribue vos gains sur votre solde de profits à la date anniversaire de votre contrat, garantissant un paiement juste et ponctuel.",

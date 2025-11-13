@@ -28,6 +28,7 @@ import HowItWorksPage from "./pages/HowItWorks";
 import ProfilePage from "./pages/Profile";
 import Logout from "./pages/Logout";
 import { ProfileCompletionGuard } from "./components/ProfileCompletionGuard";
+import UpdatePassword from "./pages/UpdatePassword";
 
 const queryClient = new QueryClient();
 
@@ -187,6 +188,7 @@ const App = () => (
             }
           />
           <Route path="/logout" element={<Logout />} />
+          <Route path="/update-password" element={<UpdatePassword />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

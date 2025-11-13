@@ -28,6 +28,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const profileSchema = z.object({
+  email: z.string().email().optional(),
   first_name: z.string().min(2, { message: "Le prénom est requis." }),
   last_name: z.string().min(2, { message: "Le nom est requis." }),
   post_nom: z.string().min(2, { message: "Le post-nom est requis." }),
@@ -52,6 +53,7 @@ const ProfilePage = () => {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
+      email: '',
       first_name: '',
       last_name: '',
       post_nom: '',
@@ -64,6 +66,7 @@ const ProfilePage = () => {
   useEffect(() => {
     if (profile) {
       form.reset({
+        email: profile.email || '',
         first_name: profile.first_name || '',
         last_name: profile.last_name || '',
         post_nom: profile.post_nom || '',
@@ -143,9 +146,17 @@ const ProfilePage = () => {
             </div>
           ) : (
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                  <FormField control={form.control} name="first_name" render={({ field }) => (
+                                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                                                  <FormField control={form.control} name="email" render={({ field }) => (
+                                                    <FormItem>
+                                                      <FormLabel>Email</FormLabel>
+                                                      <FormControl>
+                                                        <Input {...field} disabled />
+                                                      </FormControl>
+                                                      <p className="text-sm text-muted-foreground pt-2">L'adresse email ne peut pas être modifiée.</p>
+                                                      <FormMessage />
+                                                    </FormItem>
+                                                  )} />                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">                  <FormField control={form.control} name="first_name" render={({ field }) => (
                     <FormItem><FormLabel>Prénom</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="last_name" render={({ field }) => (
