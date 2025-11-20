@@ -19,7 +19,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { requestRefund } from "@/services/contractService"; // Changed import
 import { getSettings } from "@/services/settingsService";
 import { useToast } from "@/components/ui/use-toast";
-import { AlertTriangle, Download } from "lucide-react";
+import { AlertTriangle, Download, Clock, Sparkles, TrendingUp } from "lucide-react";
 
 type ContractData = Database['public']['Tables']['contracts']['Row'];
 
@@ -70,6 +70,14 @@ export const ContractCard = ({ contract, formatCurrency }: ContractCardProps) =>
   const totalProfitPaid = Number(contract.total_profit_paid) || 0;
   const refundAmount = Math.max(0, Number(contract.amount) - totalProfitPaid);
 
+  // Calculate smart badges
+  const contractAge = Math.floor((new Date().getTime() - new Date(contract.created_at).getTime()) / (1000 * 60 * 60 * 24));
+  const isNew = contractAge < 30;
+  const roiPercent = (totalProfitPaid / Number(contract.amount)) * 100;
+  const isProfitable = roiPercent > 10;
+  const monthsRemaining = contract.duration_months - (contract.months_paid || 0);
+  const isEndingSoon = monthsRemaining <= 2 && monthsRemaining > 0 && contract.status === 'active';
+
   const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case 'active': return 'default';
@@ -81,10 +89,45 @@ export const ContractCard = ({ contract, formatCurrency }: ContractCardProps) =>
   };
 
   return (
-    <Card className="shadow-elegant border-border/50 flex flex-col bg-gradient-card relative">
+    <Card className="shadow-elegant border-border/50 flex flex-col bg-gradient-card relative overflow-hidden">
+      {/* Status indicator - animated dot */}
+      {contract.status === 'active' && (
+        <div className="absolute top-3 left-3 z-10">
+          <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+        </div>
+      )}
+
       <CardHeader>
-        <div className="flex justify-between items-start">
-          <CardTitle className="text-lg">Contrat #{contract.id.substring(0, 8)}</CardTitle>
+        <div className="flex justify-between items-start gap-2">
+          <div className="flex-1">
+            <CardTitle className="text-lg">Contrat #{contract.id.substring(0, 8)}</CardTitle>
+            {/* Smart Status Badges */}
+            <div className="flex flex-wrap gap-1 mt-2">
+              {isNew && (
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  Nouveau
+                </Badge>
+              )}
+              {isProfitable && (
+                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  Rentable
+                </Badge>
+              )}
+              {isEndingSoon && (
+                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  Bientôt terminé
+                </Badge>
+              )}
+              {totalProfitPaid > 0 && (
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                  ROI: +{((totalProfitPaid / Number(contract.amount)) * 100).toFixed(1)}%
+                </Badge>
+              )}
+            </div>
+          </div>
           <Badge variant={getStatusVariant(contract.status)} className="capitalize">{contract.status}</Badge>
         </div>
       </CardHeader>
@@ -97,15 +140,26 @@ export const ContractCard = ({ contract, formatCurrency }: ContractCardProps) =>
           </div>
           <Progress value={progress} className="w-full" />
         </div>
+
+        {/* Profits versés */}
+        {totalProfitPaid > 0 && (
+          <div className="flex justify-between items-center text-sm bg-green-50 p-2 rounded-lg">
+            <span className="text-muted-foreground">Profits versés</span>
+            <span className="font-semibold text-green-600">
+              +{formatCurrency(totalProfitPaid)}
+            </span>
+          </div>
+        )}
+
         <div className="text-xs text-muted-foreground space-y-1 pt-2">
           <p>Début: {format(new Date(contract.start_date), "d MMMM yyyy", { locale: fr })}</p>
           <p>Fin: {format(new Date(contract.end_date), "d MMMM yyyy", { locale: fr })}</p>
         </div>
       </CardContent>
       <CardFooter className="absolute bottom-2 right-2 p-0 border-none bg-transparent flex gap-2">
-        <Button 
-          variant="ghost" 
-          size="icon" 
+        <Button
+          variant="ghost"
+          size="icon"
           className="text-blue-500 hover:bg-blue-500/20"
           disabled={!pdfToDownload}
           onClick={() => {
@@ -121,10 +175,10 @@ export const ContractCard = ({ contract, formatCurrency }: ContractCardProps) =>
         </Button>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="text-yellow-500 hover:bg-yellow-500/20" 
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-yellow-500 hover:bg-yellow-500/20"
               disabled={contract.status !== 'active' || contract.months_paid >= 5 || mutation.isPending} // Disable if already pending or mutation is running
             >
               <AlertTriangle className="h-5 w-5" />
@@ -144,9 +198,9 @@ export const ContractCard = ({ contract, formatCurrency }: ContractCardProps) =>
               <div className="flex justify-between text-base"><strong>Montant qui sera remboursé :</strong> <strong className="text-primary">{formatCurrency(refundAmount)}</strong></div>
             </div>
             <DialogFooter className="flex flex-col items-center gap-4 pt-4">
-              <Button 
-                onClick={handleRefund} 
-                disabled={mutation.isPending} 
+              <Button
+                onClick={handleRefund}
+                disabled={mutation.isPending}
                 className="w-full sm:w-auto"
               >
                 {mutation.isPending ? "Soumission en cours..." : "Soumettre la demande"}

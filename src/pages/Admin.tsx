@@ -7,16 +7,35 @@ import { AdminProfitChart } from "@/components/admin/AdminProfitChart";
 import { CashFlowChart } from "@/components/admin/CashFlowChart";
 import { UserGrowthChart } from "@/components/admin/UserGrowthChart";
 import { InvestorListTable } from "@/components/admin/InvestorListTable";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Users, DollarSign, TrendingUp, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
-const StatCard = ({ title, value, glowing = false, glowingColor = 'green' }: { title: string, value: string, glowing?: boolean, glowingColor?: 'green' | 'red' }) => {
+const StatCard = ({
+  title,
+  value,
+  icon: Icon,
+  gradient,
+  glowing = false,
+  glowingColor = 'green'
+}: {
+  title: string;
+  value: string;
+  icon?: React.ElementType;
+  gradient: string;
+  glowing?: boolean;
+  glowingColor?: 'green' | 'red';
+}) => {
   const glowClass = glowing ? (glowingColor === 'green' ? 'glowing-border-green' : 'glowing-border-red') : '';
-  const valueColor = glowing ? (glowingColor === 'green' ? 'text-primary' : 'text-destructive') : 'text-text-primary';
+  const valueColor = glowing ? (glowingColor === 'green' ? 'text-green-700' : 'text-red-700') : 'text-text-primary';
 
   return (
-    <div className={`flex min-w-[158px] flex-1 flex-col gap-2 rounded-lg p-6 bg-background-card border border-white/10 hover:border-primary/50 transition-all duration-300 ${glowClass}`}>
-      <p className="text-text-secondary text-base font-medium leading-normal">{title}</p>
+    <div className={`flex min-w-[158px] flex-1 flex-col gap-2 rounded-lg p-6 border ${gradient} hover:scale-[1.02] transition-all duration-300 ${glowClass}`}>
+      <div className="flex items-center justify-between">
+        <p className="text-muted-foreground text-sm font-medium leading-normal">{title}</p>
+        {Icon && <Icon className="h-5 w-5 text-muted-foreground" />}
+      </div>
       <p className={`tracking-light text-2xl font-bold leading-tight ${valueColor}`}>{value}</p>
     </div>
   );
@@ -65,18 +84,57 @@ const AdminPage = () => {
         <p className="text-text-primary text-4xl font-black leading-tight tracking-[-0.033em] min-w-72">Tableau de Bord Administrateur</p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 py-4">
-        <StatCard title="Investisseurs" value={isLoading ? '...' : stats?.total_investors?.toLocaleString() || '0'} />
-        <StatCard title="Fonds Sous Gestion" value={isLoading ? '...' : formatCurrency(stats?.funds_under_management || 0)} />
-        <StatCard title="Profit Total" value={isLoading ? '...' : formatCurrency(stats?.total_profit || 0)} glowing={true} glowingColor="green" />
-        <div className="cursor-pointer" onClick={() => navigate('/admin/deposits')}>
-          <StatCard title="Dépôts en Attente" value={isLoading ? '...' : formatCurrency(stats?.pending_deposits || 0)} glowing={true} glowingColor="red" />
+      {/* Stats with Loading States */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5 py-4">
+          {[...Array(5)].map((_, i) => (
+            <Skeleton key={i} className="h-[100px] rounded-lg" />
+          ))}
         </div>
-        <div className="cursor-pointer" onClick={() => navigate('/admin/withdrawals')}>
-          <StatCard title="Retraits en Attente" value={isLoading ? '...' : formatCurrency(stats?.pending_withdrawals || 0)} glowing={true} glowingColor="red" />
+      ) : (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5 py-4">
+          <StatCard
+            title="Investisseurs"
+            value={stats?.total_investors?.toLocaleString() || '0'}
+            icon={Users}
+            gradient="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/20"
+          />
+          <StatCard
+            title="Fonds Sous Gestion"
+            value={formatCurrency(stats?.funds_under_management || 0)}
+            icon={DollarSign}
+            gradient="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/20"
+          />
+          <StatCard
+            title="Profit Total"
+            value={formatCurrency(stats?.total_profit || 0)}
+            icon={TrendingUp}
+            gradient="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/20"
+            glowing={true}
+            glowingColor="green"
+          />
+          <div className="cursor-pointer" onClick={() => navigate('/admin/deposits')}>
+            <StatCard
+              title="Dépôts en Attente"
+              value={formatCurrency(stats?.pending_deposits || 0)}
+              icon={ArrowDownCircle}
+              gradient="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/20"
+              glowing={true}
+              glowingColor="red"
+            />
+          </div>
+          <div className="cursor-pointer" onClick={() => navigate('/admin/withdrawals')}>
+            <StatCard
+              title="Retraits en Attente"
+              value={formatCurrency(stats?.pending_withdrawals || 0)}
+              icon={ArrowUpCircle}
+              gradient="bg-gradient-to-br from-red-500/10 to-rose-500/10 border-red-500/20"
+              glowing={true}
+              glowingColor="red"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 py-6">

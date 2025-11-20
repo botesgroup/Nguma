@@ -36,7 +36,7 @@ type PendingRefund = {
 export const PendingRefunds = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const [dialogState, setDialogState] = useState<DialogState>({ isOpen: false });
   const [rejectionReason, setRejectionReason] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]); // For bulk actions, if implemented later
@@ -102,7 +102,7 @@ export const PendingRefunds = () => {
               <TableHeader>
                 <TableRow>
                   {/* Checkbox column for future bulk actions */}
-                  <TableHead className="w-[50px]"><Checkbox checked={numSelected > 0 && numSelected === allRefunds.length} onCheckedChange={() => {}} aria-label="Select all" disabled /></TableHead>
+                  <TableHead className="w-[50px]"><Checkbox checked={numSelected > 0 && numSelected === allRefunds.length} onCheckedChange={() => { }} aria-label="Select all" disabled /></TableHead>
                   <TableHead>Contrat ID</TableHead>
                   <TableHead>Utilisateur</TableHead>
                   <TableHead>Montant Investi</TableHead>
@@ -141,19 +141,31 @@ export const PendingRefunds = () => {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow><TableCell colSpan={7} className="text-center h-24">Aucune demande de remboursement en attente.</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={7} className="p-0">
+                      <div className="text-center py-16 bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg m-4">
+                        <div className="text-6xl mb-4">✅</div>
+                        <h3 className="text-2xl font-semibold mb-2 text-amber-900">
+                          Tous les remboursements traités !
+                        </h3>
+                        <p className="text-muted-foreground">
+                          Aucun remboursement en attente de validation
+                        </p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
         </CardContent>
         <CardFooter className="flex items-center justify-between border-t pt-6">
-            <div className="text-sm text-muted-foreground">{numSelected} sur {allRefunds.length} ligne(s) sélectionnée(s).</div>
-            <div className="flex gap-2">
-                {/* Bulk actions disabled for now */}
-                <Button variant="outline" size="sm" disabled>Approuver la sélection</Button>
-                <Button variant="destructive" size="sm" disabled>Rejeter la sélection</Button>
-            </div>
+          <div className="text-sm text-muted-foreground">{numSelected} sur {allRefunds.length} ligne(s) sélectionnée(s).</div>
+          <div className="flex gap-2">
+            {/* Bulk actions disabled for now */}
+            <Button variant="outline" size="sm" disabled>Approuver la sélection</Button>
+            <Button variant="destructive" size="sm" disabled>Rejeter la sélection</Button>
+          </div>
         </CardFooter>
       </Card>
 
@@ -162,19 +174,19 @@ export const PendingRefunds = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
             <AlertDialogDescription>
-              {dialogState.action === "approve" 
-                ? "Cette action approuvera le remboursement et créditera le portefeuille de l'utilisateur. Cette action est irréversible." 
+              {dialogState.action === "approve"
+                ? "Cette action approuvera le remboursement et créditera le portefeuille de l'utilisateur. Cette action est irréversible."
                 : "Cette action rejettera la demande de remboursement. L'utilisateur en sera notifié."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {dialogState.action === "reject" && (
             <div className="grid gap-2 py-4">
               <Label htmlFor="reason">Raison du rejet</Label>
-              <Input 
-                id="reason" 
-                value={rejectionReason} 
-                onChange={(e) => setRejectionReason(e.target.value)} 
-                placeholder="Ex: Conditions de remboursement non remplies" 
+              <Input
+                id="reason"
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Ex: Conditions de remboursement non remplies"
               />
             </div>
           )}

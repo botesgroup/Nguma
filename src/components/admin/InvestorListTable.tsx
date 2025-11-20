@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useDebounce } from "@/hooks/useDebounce";
 import { MoreHorizontal, FileDown, AlertTriangle, CheckCircle, Edit } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { UserDetailDialog } from "@/components/admin/UserDetailDialog";
 import { CreditUserDialog } from "@/components/admin/CreditUserDialog";
@@ -72,7 +73,7 @@ export const InvestorListTable = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery<{ data: Investor[], count: number }>({ 
+  const { data, isLoading } = useQuery<{ data: Investor[], count: number }>({
     queryKey: ["investorsList", debouncedSearchQuery, page],
     queryFn: () => getInvestorsList(debouncedSearchQuery, page, PAGE_SIZE),
   });
@@ -124,7 +125,20 @@ export const InvestorListTable = () => {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={5} className="text-center">Chargement...</TableCell></TableRow>
+                [...Array(5)].map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                      <Skeleton className="h-3 w-32 mt-1" />
+                    </TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded-md" /></TableCell>
+                  </TableRow>
+                ))
               ) : filteredInvestors.length > 0 ? (
                 filteredInvestors.map((investor) => {
                   const isBanned = investor.banned_until && new Date(investor.banned_until) > new Date();
@@ -162,7 +176,19 @@ export const InvestorListTable = () => {
                   );
                 })
               ) : (
-                <TableRow><TableCell colSpan={5} className="text-center h-24">Aucun investisseur trouvé.</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={5} className="p-0">
+                    <div className="text-center py-16 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg m-4 border border-blue-100">
+                      <div className="text-6xl mb-4">👥</div>
+                      <h3 className="text-2xl font-semibold mb-2 text-blue-900">
+                        Aucun investisseur trouvé
+                      </h3>
+                      <p className="text-muted-foreground">
+                        Essayez de modifier vos filtres de recherche.
+                      </p>
+                    </div>
+                  </TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>

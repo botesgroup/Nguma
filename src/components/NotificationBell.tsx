@@ -1,8 +1,9 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { getNotifications, markAllNotificationsAsRead, markNotificationAsRead } from "@/services/notificationService";
+import { getNotifications, markAllNotificationsAsRead, markNotificationAsRead, getNotificationIcon, getPriorityBadgeColor } from "@/services/notificationService";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Bell, CheckCheck } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -52,6 +53,16 @@ export const NotificationBell = () => {
     }
   };
 
+  const getPriorityIndicator = (priority?: string) => {
+    if (priority === 'urgent' || priority === 'high') {
+      const badgeClass = getPriorityBadgeColor(priority);
+      return (
+        <span className={`inline-flex h-2 w-2 rounded-full ${badgeClass}`} />
+      );
+    }
+    return null;
+  };
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -65,7 +76,7 @@ export const NotificationBell = () => {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80">
+      <PopoverContent className="w-96">
         <div className="grid gap-4">
           <div className="space-y-2">
             <div className="flex justify-between items-center">
@@ -85,17 +96,34 @@ export const NotificationBell = () => {
               notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`grid grid-cols-[25px_1fr] items-start pb-4 last:mb-0 last:pb-0 cursor-pointer hover:bg-muted/50 p-2 rounded-md ${
-                    !notification.is_read ? "font-semibold" : ""
-                  }`}
+                  className={`grid grid-cols-[35px_1fr_auto] items-start pb-3 pt-2 px-2 last:mb-0 last:pb-0 cursor-pointer hover:bg-muted/50 rounded-md transition-colors ${!notification.is_read ? "bg-muted/30" : ""
+                    }`}
                   onClick={() => handleNotificationClick(notification)}
                 >
-                  <span className={`flex h-2 w-2 translate-y-1 rounded-full ${!notification.is_read ? 'bg-primary' : 'bg-transparent'}`} />
+                  <div className="flex items-center justify-center">
+                    <span className="text-2xl">{getNotificationIcon(notification.type)}</span>
+                  </div>
                   <div className="grid gap-1">
-                    <p className="text-sm">{notification.message}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      {!notification.is_read && (
+                        <span className="flex h-2 w-2 rounded-full bg-primary" />
+                      )}
+                      {getPriorityIndicator(notification.priority)}
+                      {(notification.priority === 'urgent' || notification.priority === 'high') && (
+                        <Badge variant="outline" className={`text-xs ${getPriorityBadgeColor(notification.priority)} text-white border-0`}>
+                          {notification.priority === 'urgent' ? 'URGENT' : 'IMPORTANT'}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className={`text-sm ${!notification.is_read ? "font-semibold" : ""}`}>
+                      {notification.message}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true, locale: fr })}
                     </p>
+                  </div>
+                  <div className="flex items-center">
+                    {/* Empty space for alignment */}
                   </div>
                 </div>
               ))

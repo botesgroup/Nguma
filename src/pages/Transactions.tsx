@@ -8,8 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+import { ArrowDownCircle, ArrowUpCircle, Wallet } from "lucide-react";
 import {
   Pagination,
   PaginationContent,
@@ -32,9 +34,26 @@ const TransactionsPage = () => {
     placeholderData: { transactions: [], count: 0 },
   });
 
+  // Fetch all transactions for stats (without pagination)
+  const { data: allTransactionsData } = useQuery({
+    queryKey: ["allTransactionsStats", transactionType, searchQuery],
+    queryFn: () => getAllTransactions({ type: transactionType, search: searchQuery }),
+    placeholderData: { transactions: [], count: 0 },
+  });
+
   const transactions = paginatedData?.transactions;
   const totalCount = paginatedData?.count || 0;
   const totalPages = Math.ceil(totalCount / pageSize);
+
+  // Calculate stats
+  const allTx = allTransactionsData?.transactions || [];
+  const totalDeposits = allTx
+    .filter(tx => tx.type === 'deposit')
+    .reduce((sum, tx) => sum + Number(tx.amount), 0);
+  const totalWithdrawals = allTx
+    .filter(tx => tx.type === 'withdrawal')
+    .reduce((sum, tx) => sum + Number(tx.amount), 0);
+  const netBalance = totalDeposits - totalWithdrawals;
 
   const localFormatCurrency = (amount: number) => {
     return formatCurrency(amount, wallet?.currency || 'USD');
@@ -83,10 +102,66 @@ const TransactionsPage = () => {
         <p className="text-muted-foreground">Consultez et filtrez toutes vos transactions.</p>
       </div>
 
+      {/* Summary Stats - 3 Cards */}
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-[100px] rounded-lg" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/20">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm text-muted-foreground">Total Dépôts</div>
+                <ArrowDownCircle className="h-4 w-4 text-green-600" />
+              </div>
+              <div className="text-2xl font-bold text-green-700">
+                +{localFormatCurrency(totalDeposits)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Somme des dépôts filtrés
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-red-500/10 to-rose-500/10 border-red-500/20">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm text-muted-foreground">Total Retraits</div>
+                <ArrowUpCircle className="h-4 w-4 text-red-600" />
+              </div>
+              <div className="text-2xl font-bold text-red-700">
+                -{localFormatCurrency(totalWithdrawals)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Somme des retraits filtrés
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/20">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm text-muted-foreground">Solde Net</div>
+                <Wallet className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className={`text-2xl font-bold ${netBalance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                {netBalance >= 0 ? '+' : ''}{localFormatCurrency(netBalance)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Dépôts - Retraits
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Filter Controls */}
       <div className="flex items-center gap-4">
-        <Input 
-          placeholder="Rechercher par description..." 
+        <Input
+          placeholder="Rechercher par description..."
           className="max-w-sm"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -138,9 +213,8 @@ const TransactionsPage = () => {
                   <TableCell className="capitalize">{tx.type}</TableCell>
                   <TableCell>{tx.description}</TableCell>
                   <TableCell><Badge variant={getStatusVariant(tx.status)} className="capitalize">{tx.status}</Badge></TableCell>
-                  <TableCell className={`text-right font-medium ${ 
-                    tx.type === 'deposit' || tx.type === 'profit' ? 'text-profit' : tx.type === 'withdrawal' ? 'text-loss' : ''
-                  }`}> 
+                  <TableCell className={`text-right font-medium ${tx.type === 'deposit' || tx.type === 'profit' ? 'text-profit' : tx.type === 'withdrawal' ? 'text-loss' : ''
+                    }`}>
                     {tx.type === 'withdrawal' || tx.type === 'investment' ? "-" : "+"}
                     {localFormatCurrency(Number(tx.amount))}
                   </TableCell>
@@ -156,12 +230,12 @@ const TransactionsPage = () => {
       </div>
 
       {/* Pagination Controls */}
-      { totalPages > 1 && (
+      {totalPages > 1 && (
         <Pagination>
           <PaginationContent>
             <PaginationItem>
               <PaginationPrevious onClick={() => setPage(prev => Math.max(1, prev - 1))}
-                                 isActive={page > 1} />
+                isActive={page > 1} />
             </PaginationItem>
             <PaginationItem>
               {/* Display current page / total pages */}
@@ -171,7 +245,7 @@ const TransactionsPage = () => {
             </PaginationItem>
             <PaginationItem>
               <PaginationNext onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
-                              isActive={page < totalPages} />
+                isActive={page < totalPages} />
             </PaginationItem>
           </PaginationContent>
         </Pagination>

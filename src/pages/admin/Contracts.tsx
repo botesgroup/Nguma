@@ -7,16 +7,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { useDebounce } from "@/hooks/useDebounce";
 import type { Database } from "@/integrations/supabase/types";
-import { Button } from "@/components/ui/button"; // Added Button import
-import { MoreHorizontal, Edit } from "lucide-react"; // Added Edit icon import
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"; // Added DropdownMenu imports
-import { Dialog } from "@/components/ui/dialog"; // Added Dialog import
-import { EditContractDialog } from "@/components/admin/EditContractDialog"; // Added EditContractDialog import
+import { Button } from "@/components/ui/button";
+import { MoreHorizontal, Edit, FileText, CheckCircle, TrendingUp, DollarSign } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog } from "@/components/ui/dialog";
+import { EditContractDialog } from "@/components/admin/EditContractDialog";
 
 type ContractData = Database['public']['Tables']['contracts']['Row'] & {
   first_name: string | null;
@@ -45,6 +46,11 @@ const AdminContractsPage = () => {
   const totalCount = paginatedData?.count || 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
+  // Calculate stats
+  const activeContracts = contracts.filter(c => c.status === 'active');
+  const totalValue = contracts.reduce((sum, c) => sum + Number(c.amount), 0);
+  const totalProfits = contracts.reduce((sum, c) => sum + Number(c.total_profit_paid || 0), 0);
+
   const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case 'active': return 'default';
@@ -66,12 +72,89 @@ const AdminContractsPage = () => {
       <div>
         <h1 className="text-3xl font-bold mb-2">Gestion des Contrats</h1>
         <p className="text-muted-foreground">Consultez et filtrez tous les contrats de la plateforme.</p>
+        {!isLoading && totalCount > 0 && (
+          <div className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+            <span className="text-sm text-muted-foreground">Contrats trouvés:</span>
+            <span className="text-base font-bold text-blue-700">{totalCount}</span>
+          </div>
+        )}
       </div>
+
+      {/* Stats Cards */}
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-[100px] rounded-lg" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/20">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm text-muted-foreground">Total Contrats</div>
+                <FileText className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="text-2xl font-bold text-blue-700">
+                {totalCount}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Sur la plateforme
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/20">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm text-muted-foreground">Contrats Actifs</div>
+                <CheckCircle className="h-4 w-4 text-green-600" />
+              </div>
+              <div className="text-2xl font-bold text-green-700">
+                {activeContracts.length}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                En cours de paiement
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/20">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm text-muted-foreground">Valeur Totale</div>
+                <DollarSign className="h-4 w-4 text-purple-600" />
+              </div>
+              <div className="text-2xl font-bold text-purple-700">
+                {formatCurrency(totalValue)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Tous contrats confondus
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/20">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm text-muted-foreground">Profits Générés</div>
+                <TrendingUp className="h-4 w-4 text-amber-600" />
+              </div>
+              <div className="text-2xl font-bold text-amber-700">
+                {formatCurrency(totalProfits)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Versés aux investisseurs
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Filter Controls */}
       <div className="flex items-center gap-4">
-        <Input 
-          placeholder="Rechercher par nom, email, ID contrat..." 
+        <Input
+          placeholder="Rechercher par nom, email, ID contrat..."
           className="max-w-sm"
           value={searchQuery}
           onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
@@ -108,9 +191,9 @@ const AdminContractsPage = () => {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              [...Array(PAGE_SIZE)].map((_, i) => (
+              [...Array(5)].map((_, i) => (
                 <TableRow key={i}>
-                  {[...Array(8)].map((_, j) => ( // Changed to 8 columns
+                  {[...Array(8)].map((_, j) => (
                     <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                   ))}
                 </TableRow>
@@ -145,7 +228,17 @@ const AdminContractsPage = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="text-center h-24">Aucun contrat trouvé.</TableCell>
+                <TableCell colSpan={8} className="p-0">
+                  <div className="text-center py-16 bg-gradient-to-br from-slate-50 to-gray-50 rounded-lg m-4 border border-slate-200">
+                    <div className="text-6xl mb-4">📋</div>
+                    <h3 className="text-2xl font-semibold mb-2 text-slate-900">
+                      Aucun contrat trouvé
+                    </h3>
+                    <p className="text-muted-foreground">
+                      Essayez de modifier vos filtres de recherche.
+                    </p>
+                  </div>
+                </TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -153,12 +246,12 @@ const AdminContractsPage = () => {
       </div>
 
       {/* Pagination Controls */}
-      { totalPages > 1 && (
+      {totalPages > 1 && (
         <Pagination>
           <PaginationContent>
             <PaginationItem>
               <PaginationPrevious onClick={() => setPage(prev => Math.max(1, prev - 1))}
-                                 disabled={page <= 1} />
+                disabled={page <= 1} />
             </PaginationItem>
             <PaginationItem>
               <span className="text-sm font-medium p-2">
@@ -167,7 +260,7 @@ const AdminContractsPage = () => {
             </PaginationItem>
             <PaginationItem>
               <PaginationNext onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
-                              disabled={page >= totalPages} />
+                disabled={page >= totalPages} />
             </PaginationItem>
           </PaginationContent>
         </Pagination>
@@ -175,10 +268,10 @@ const AdminContractsPage = () => {
 
       {selectedContract && (
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <EditContractDialog 
-            contract={selectedContract} 
-            open={isEditDialogOpen} 
-            onOpenChange={setIsEditDialogOpen} 
+          <EditContractDialog
+            contract={selectedContract}
+            open={isEditDialogOpen}
+            onOpenChange={setIsEditDialogOpen}
           />
         </Dialog>
       )}

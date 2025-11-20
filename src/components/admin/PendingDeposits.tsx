@@ -225,7 +225,19 @@ export const PendingDeposits = () => {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow><TableCell colSpan={8} className="text-center h-24">Aucun dépôt en attente.</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={8} className="p-0">
+                      <div className="text-center py-16 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg m-4">
+                        <div className="text-6xl mb-4">✅</div>
+                        <h3 className="text-2xl font-semibold mb-2 text-green-900">
+                          Tous les dépôts traités !
+                        </h3>
+                        <p className="text-muted-foreground">
+                          Aucun dépôt en attente de validation
+                        </p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 )}
               </TableBody>
             </Table>

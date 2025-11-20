@@ -135,7 +135,19 @@ export const PendingWithdrawals = () => {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow><TableCell colSpan={5} className="text-center h-24">Aucun retrait en attente.</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={5} className="p-0">
+                      <div className="text-center py-16 bg-gradient-to-br from-red-50 to-rose-50 rounded-lg m-4">
+                        <div className="text-6xl mb-4">✅</div>
+                        <h3 className="text-2xl font-semibold mb-2 text-red-900">
+                          Tous les retraits traités !
+                        </h3>
+                        <p className="text-muted-foreground">
+                          Aucun retrait en attente de validation
+                        </p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 )}
               </TableBody>
             </Table>
@@ -155,7 +167,7 @@ export const PendingWithdrawals = () => {
       </AlertDialog>
 
       {selectedUser && (
-        <CreditUserDialog 
+        <CreditUserDialog
           userId={selectedUser.id}
           userEmail={selectedUser.email}
           open={isCreditUserOpen}

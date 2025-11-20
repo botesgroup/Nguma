@@ -2,9 +2,16 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
+export type Contract = Database['public']['Tables']['contracts']['Row'];
+
 export interface MonthlyProfit {
   month_year: string;
   total_profit: number;
+}
+
+export interface UserGrowth {
+  month_year: string;
+  new_users_count: number;
 }
 
 // --- Deposit Management ---
@@ -85,14 +92,14 @@ export const getUserDetails = async (userId: string) => {
   return { profile: profile.data, wallet: wallet.data, contracts: contracts.data, transactions: transactions.data };
 };
 
-export const getUserContracts = async (userId: string) => {
+export const getUserContracts = async (userId: string): Promise<Contract[]> => {
   const { data, error } = await supabase.rpc('get_contracts_for_user', { p_user_id: userId });
 
   if (error) {
     console.error("Error fetching contracts for user:", error);
     throw new Error("Could not fetch user contracts.");
   }
-  return data || [];
+  return (data as unknown as Contract[]) || [];
 };
 
 export const getInvestorsList = async (searchQuery?: string, page: number = 1, pageSize: number = 10) => {
@@ -159,12 +166,15 @@ export const getAdminDashboardStats = async () => {
   const { data, error } = await supabase.rpc('get_admin_stats');
   if (error) throw new Error("Could not fetch admin dashboard stats.");
 
-  // Note: The actual return structure depends on the RPC function, assuming it returns success/error wrapper or the stats directly.
-  // If it returns just stats, this check might be wrong. Assuming consistency with other admin functions:
-  const result = data as { success: boolean; error?: string;[key: string]: any };
-
-  if (result && typeof result.success === 'boolean' && !result.success) throw new Error(result.error || "An unknown error occurred.");
-  return result;
+  // The RPC returns a direct JSON object with stats, not a wrapper
+  return data as {
+    total_investors: number;
+    active_investors: number;
+    funds_under_management: number;
+    total_profit: number;
+    pending_deposits: number;
+    pending_withdrawals: number;
+  };
 };
 
 export const getAggregateProfitsByMonth = async () => {
@@ -188,7 +198,7 @@ export const getUserGrowthSummary = async () => {
     console.error("Error fetching user growth summary:", error);
     throw new Error("Could not fetch user growth summary.");
   }
-  return data || [];
+  return (data as unknown as UserGrowth[]) || [];
 };
 
 // --- Withdrawal Management ---

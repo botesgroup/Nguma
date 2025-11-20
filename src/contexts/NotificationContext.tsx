@@ -1,8 +1,7 @@
 
-import { createContext, useContext, ReactNode, useEffect, useRef } from 'react';
+import { createContext, useContext, ReactNode, useEffect, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getNotifications } from '@/services/notificationService';
-import type { Database } from '@/integrations/supabase/types';
+import { getNotifications, type Notification } from '@/services/notificationService';
 
 // Custom hook to get the previous value of a prop or state.
 const usePrevious = <T,>(value: T) => {
@@ -13,25 +12,51 @@ const usePrevious = <T,>(value: T) => {
   return ref.current;
 };
 
-type Notification = Database['public']['Tables']['notifications']['Row'];
+interface NotificationStats {
+  byType: Record<string, number>;
+  byPriority: Record<string, number>;
+}
 
 interface NotificationContextType {
   notifications: Notification[];
   unreadCount: number;
   isLoading: boolean;
+  stats: NotificationStats;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const NotificationProvider = ({ children }: { children: ReactNode }) => {
-  const { data: notifications, isLoading } = useQuery<Notification[]>({ 
+  const { data: notifications, isLoading } = useQuery<Notification[]>({
     queryKey: ['notifications'],
     queryFn: getNotifications,
-    refetchInterval: 10000, // Refresh every 10 seconds for debugging
+    refetchInterval: 10000, // Refresh every 10 seconds
   });
 
   const unreadCount = notifications?.filter(n => !n.is_read).length || 0;
   const prevUnreadCount = usePrevious(unreadCount);
+
+  // Calculate statistics
+  const stats = useMemo<NotificationStats>(() => {
+    if (!notifications) {
+      return { byType: {}, byPriority: {} };
+    }
+
+    const byType: Record<string, number> = {};
+    const byPriority: Record<string, number> = {};
+
+    notifications.forEach(notification => {
+      // Count by type
+      const type = notification.type || 'system';
+      byType[type] = (byType[type] || 0) + 1;
+
+      // Count by priority
+      const priority = notification.priority || 'medium';
+      byPriority[priority] = (byPriority[priority] || 0) + 1;
+    });
+
+    return { byType, byPriority };
+  }, [notifications]);
 
   useEffect(() => {
     // Play sound only when the unread count increases
@@ -48,6 +73,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     notifications: notifications || [],
     unreadCount,
     isLoading,
+    stats,
   };
 
   return (
