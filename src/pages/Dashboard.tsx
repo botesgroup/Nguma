@@ -76,8 +76,9 @@ const Dashboard = () => {
         </div>
         <div className="flex items-center gap-2">
           <DepositDialog />
-          <WithdrawDialog wallet={wallet} />
+          <NewContractDialog />
           <ReinvestDialog wallet={wallet} />
+          <WithdrawDialog wallet={wallet} />
         </div>
       </div>
 
@@ -139,9 +140,8 @@ const Dashboard = () => {
 
       {/* Contracts Section with Enhanced Empty State */}
       <div>
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+        <div className="mb-4">
           <h2 className="text-xl sm:text-2xl font-bold">Mes Contrats</h2>
-          <NewContractDialog />
         </div>
         {isLoadingContracts ? (
           <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">

@@ -151,22 +151,7 @@ export const ContractCard = ({ contract, formatCurrency }: ContractCardProps) =>
         </div>
       </CardContent>
       <CardFooter className="absolute bottom-2 right-2 p-0 border-none bg-transparent flex gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-blue-500 hover:bg-blue-500/20"
-          disabled={!pdfToDownload}
-          onClick={() => {
-            if (pdfToDownload) {
-              window.open(pdfToDownload, "_blank");
-              toast({
-                title: "Contract Download Successful",
-              });
-            }
-          }}
-        >
-          <Download className="h-5 w-5" />
-        </Button>
+
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button
@@ -192,14 +177,7 @@ export const ContractCard = ({ contract, formatCurrency }: ContractCardProps) =>
               <div className="flex justify-between text-base"><strong>Montant qui sera remboursé :</strong> <strong className="text-primary">{formatCurrency(refundAmount)}</strong></div>
             </div>
             <DialogFooter className="flex flex-col items-center gap-4 pt-4">
-              <Button
-                onClick={handleRefund}
-                disabled={mutation.isPending}
-                className="w-full sm:w-auto"
-              >
-                {mutation.isPending ? "Soumission en cours..." : "Soumettre la demande"}
-              </Button>
-              <Button variant="secondary" onClick={() => setIsDialogOpen(false)} className="w-full sm:w-auto">Annuler</Button>
+              <Button variant="secondary" onClick={() => setIsDialogOpen(false)} className="w-full sm:w-auto">Fermer</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

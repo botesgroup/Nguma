@@ -93,8 +93,11 @@ export const NewContractDialog = () => {
           Nouveau Contrat
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-4xl md:max-w-5xl lg:max-w-6xl h-[90vh]">
+      <DialogContent className="sm:max-w-lg">
         <form onSubmit={handleSubmit}>
+          <div className="flex justify-center mb-4">
+            <img src="/logo.png" alt="Nguma Logo" className="h-20 object-contain" />
+          </div>
           <DialogHeader>
             <DialogTitle>Créer un nouveau contrat</DialogTitle>
             <DialogDescription>
@@ -102,34 +105,10 @@ export const NewContractDialog = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="w-full rounded-md border my-4 p-4 bg-muted/20 text-sm text-muted-foreground overflow-y-auto" style={{ height: '200px' }}>
-            <p className="mb-2 font-semibold">Termes et Conditions d'Investissement</p>
-            <p>En créant ce contrat, vous acceptez d'investir le montant spécifié pour une durée de 10 mois.</p>
-            <p>Les profits seront versés mensuellement sur votre solde de profit.</p>
-            <p>Le capital initial n'est pas restitué à la fin du contrat (il est amorti dans les versements mensuels).</p>
-            <p>Tout remboursement anticipé (avant 5 mois) sera calculé en déduisant les profits déjà perçus.</p>
-          </div>
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="amount" className="text-right">
-              Montant (USD)
-            </Label>
-            <Input
-              id="amount"
-              type="number"
-              value={amount}
-              className="col-span-3"
-              placeholder="Ex: 5000"
-              required
-              readOnly // Champ en lecture seule
-              disabled={mutation.isPending}
-            />
-          </div>
-
           <div className="flex items-center space-x-2 mt-4">
             <Checkbox id="terms" checked={isTermsAccepted} onCheckedChange={(checked) => setIsTermsAccepted(checked as boolean)} />
             <label htmlFor="terms" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-              J'ai lu et j'accepte les termes du contrat
+              J'ai lu et j'accepte les <a href="/terms" className="text-primary hover:underline">termes et conditions du contrat</a>
             </label>
           </div>
 
