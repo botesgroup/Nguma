@@ -55,7 +55,16 @@ export const UserGrowthChart = () => {
               contentStyle={{ backgroundColor: "#1A1A1D", border: "none", borderRadius: "8px" }}
               labelStyle={{ color: "#EAEAEA" }}
             />
-            <Line type="monotone" dataKey="New Users" stroke="#8884d8" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 8 }} />
+            <Line
+              type="monotone"
+              dataKey="New Users"
+              stroke="#8884d8"
+              strokeWidth={2}
+              dot={{ r: 4 }}
+              activeDot={{ r: 8 }}
+              animationDuration={1000}
+              animationEasing="ease-in-out"
+            />
           </LineChart>
         </ResponsiveContainer>
       </CardContent>

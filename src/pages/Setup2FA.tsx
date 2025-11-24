@@ -15,11 +15,12 @@ import { Loader2, Shield, Smartphone, CheckCircle2 } from 'lucide-react';
 
 export default function Setup2FA() {
     const navigate = useNavigate();
-    const { enroll, verify, isLoading } = use2FA();
+    const { enroll, verify, generateBackupCodes, isLoading } = use2FA();
 
-    const [step, setStep] = useState<'intro' | 'scan' | 'verify' | 'complete'>('intro');
+    const [step, setStep] = useState<'intro' | 'scan' | 'verify' | 'backup' | 'complete'>('intro');
     const [enrollment, setEnrollment] = useState<MFAEnrollment | null>(null);
     const [code, setCode] = useState('');
+    const [backupCodes, setBackupCodes] = useState<string[]>([]);
 
     const handleStart = async () => {
         const result = await enroll();
@@ -36,7 +37,15 @@ export default function Setup2FA() {
 
         const success = await verify(enrollment.id, code);
         if (success) {
-            setStep('complete');
+            // Générer les codes de backup
+            const result = await generateBackupCodes();
+            if (result.success) {
+                setBackupCodes(result.codes);
+                setStep('backup');
+            } else {
+                // En cas d'erreur, passer quand même à complete
+                setStep('complete');
+            }
         }
     };
 
@@ -166,7 +175,65 @@ export default function Setup2FA() {
                     </>
                 )}
 
-                {/* Étape 4 : Complet */}
+                {/* Étape 4 : Sauvegarder les codes de backup */}
+                {step === 'backup' && backupCodes.length > 0 && (
+                    <>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Shield className="h-6 w-6" />
+                                Codes de Récupération
+                            </CardTitle>
+                            <CardDescription>
+                                Sauvegardez ces codes dans un endroit sûr
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <Alert>
+                                <AlertTitle>⚠️ Important</AlertTitle>
+                                <AlertDescription>
+                                    Ces codes ne seront affichés qu'une seule fois. Vous pouvez les utiliser pour vous connecter si vous perdez accès à votre application d'authentification.
+                                </AlertDescription>
+                            </Alert>
+
+                            <div className="bg-gray-50 rounded-lg p-4">
+                                <p className="text-sm font-medium mb-2">Vos 10 codes de récupération :</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {backupCodes.map((code, index) => (
+                                        <div
+                                            key={index}
+                                            className="bg-white border rounded px-3 py-2 text-center font-mono text-sm"
+                                        >
+                                            {code}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    const text = backupCodes.join('\n');
+                                    const blob = new Blob([`NGUMA - Codes de Récupération 2FA\n\nDate: ${new Date().toLocaleDateString('fr-FR')}\n\nCodes:\n${text}\n\nGardez ces codes en lieu sûr. Ils ne seront affichés qu'une seule fois.`], { type: 'text/plain' });
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `nguma_backup_codes_${new Date().getTime()}.txt`;
+                                    a.click();
+                                    URL.revokeObjectURL(url);
+                                }}
+                                className="w-full"
+                            >
+                                📥 Télécharger les codes
+                            </Button>
+
+                            <Button onClick={() => setStep('complete')} className="w-full">
+                                J'ai sauvegardé mes codes
+                            </Button>
+                        </CardContent>
+                    </>
+                )}
+
+                {/* Étape 5 : Complet */}
                 {step === 'complete' && (
                     <>
                         <CardHeader>

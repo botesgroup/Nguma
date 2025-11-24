@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Copy, MoreHorizontal } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CreditUserDialog } from "./CreditUserDialog";
+import { usePendingWithdrawalsRealtime } from "@/hooks/useRealtimeSync";
 
 type ActionType = "approve" | "reject";
 interface DialogState {
@@ -23,6 +24,8 @@ interface DialogState {
 type SelectedUser = { id: string; email: string; };
 
 export const PendingWithdrawals = () => {
+  // Enable Realtime synchronization for pending withdrawals
+  usePendingWithdrawalsRealtime();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dialogState, setDialogState] = useState<DialogState>({ isOpen: false });

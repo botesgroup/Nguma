@@ -16,13 +16,16 @@ import { Copy, MoreHorizontal } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AdjustDepositDialog } from "./AdjustDepositDialog";
+import { usePendingDepositsRealtime } from "@/hooks/useRealtimeSync";
 
 type ActionType = "approve" | "reject";
+
 interface DialogState {
   isOpen: boolean;
   action?: ActionType;
   transactionId?: string;
 }
+
 type SelectedDeposit = { id: string; amount: number; userEmail: string; };
 
 interface PendingDeposit {
@@ -41,6 +44,9 @@ interface PendingDeposit {
 }
 
 export const PendingDeposits = () => {
+  // Enable Realtime synchronization for pending deposits
+  usePendingDepositsRealtime();
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 

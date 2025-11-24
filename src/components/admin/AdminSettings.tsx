@@ -1,256 +1,362 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getSettings, updateSetting } from "@/services/settingsService";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useState, useEffect } from "react";
-import { Upload, Settings as SettingsIcon, CreditCard, FileText, Clock } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Database } from "@/integrations/supabase/types";
+import * as React from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Loader2, Shield, Settings as SettingsIcon } from 'lucide-react';
+import { invalidateSecuritySettingsCache } from '@/services/securitySettingsService';
+import { MarkdownEditor } from '@/components/MarkdownEditor';
 
-type Setting = Database['public']['Tables']['settings']['Row'];
-
-// A new component to render the correct form control based on the setting type
-const SettingControl = ({ setting, handleInputChange, handleSave, mutation }: { setting: Setting, handleInputChange: (key: string, value: string) => void, handleSave: (key: string) => void, mutation: any }) => {
-  switch (setting.type) {
-    case 'boolean':
-      return (
-        <div className="flex items-center gap-2 w-1/3 justify-end">
-          <Switch
-            checked={setting.value === 'true'}
-            onCheckedChange={(checked) => {
-              // For switches, it's better UX to save immediately
-              const newValue = checked.toString();
-              handleInputChange(setting.key, newValue);
-              mutation.mutate({ key: setting.key, value: newValue });
-            }}
-          />
-        </div>
-      );
-    case 'select':
-      return (
-        <div className="flex items-center gap-2 w-1/3">
-          <Select
-            value={setting.value ?? ""}
-            onValueChange={(value) => handleInputChange(setting.key, value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Sélectionner..." />
-            </SelectTrigger>
-            <SelectContent>
-              {setting.options?.map(option => (
-                <SelectItem key={option} value={option}>{option}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button onClick={() => handleSave(setting.key)} disabled={mutation.isPending && mutation.variables?.key === setting.key}>
-            Sauvegarder
-          </Button>
-        </div>
-      );
-    case 'textarea':
-      return (
-        <div className="flex flex-col gap-2 w-full">
-          <Textarea
-            id={setting.key}
-            value={setting.value ?? ""}
-            onChange={(e) => handleInputChange(setting.key, e.target.value)}
-            className="min-h-[200px] font-mono text-sm"
-          />
-          <Button onClick={() => handleSave(setting.key)} disabled={mutation.isPending && mutation.variables?.key === setting.key} className="self-end">
-            Sauvegarder
-          </Button>
-        </div>
-      );
-    case 'number':
-    default: // 'text' and others
-      return (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
-          <Input
-            id={setting.key}
-            type={setting.type === 'number' ? 'number' : 'text'}
-            value={setting.value ?? ""}
-            onChange={(e) => handleInputChange(setting.key, e.target.value)}
-            className="w-full sm:w-48"
-          />
-          <Button onClick={() => handleSave(setting.key)} disabled={mutation.isPending && mutation.variables?.key === setting.key} className="w-full sm:w-auto">
-            Sauvegarder
-          </Button>
-        </div>
-      );
-  }
-};
+interface Setting {
+  id: string;
+  key: string;
+  value: string;
+  type: 'text' | 'number' | 'boolean' | 'select' | 'textarea';
+  label: string;
+  description?: string;
+  options?: string[];
+  category?: string;
+}
 
 export const AdminSettings = () => {
-  const { data: settings, isLoading } = useQuery({
-    queryKey: ["settings"],
-    queryFn: getSettings,
-  });
-
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [settingsState, setSettingsState] = useState<Setting[]>([]);
 
-  useEffect(() => {
-    if (settings) {
-      setSettingsState(settings);
-    }
-  }, [settings]);
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('*')
+        .order('category', { ascending: true })
+        .order('label', { ascending: true });
 
-  const mutation = useMutation({
-    mutationFn: updateSetting,
-    onSuccess: () => {
-      toast({ title: "Succès", description: "Paramètre mis à jour." });
-      queryClient.invalidateQueries({ queryKey: ['settings'] });
-    },
-    onError: (error) => {
-      toast({ variant: "destructive", title: "Erreur", description: error.message });
+      if (error) throw error;
+      return data as Setting[];
     },
   });
-  const handleInputChange = (key: string, value: string) => {
-    setSettingsState(currentSettings =>
-      currentSettings.map(s => s.key === key ? { ...s, value } : s)
-    );
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ key, value }: { key: string; value: string }) => {
+      const { error } = await supabase
+        .from('settings')
+        .update({ value })
+        .eq('key', key);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+
+      // Invalidate security settings cache if updating security category
+      const setting = settings?.find(s => s.key === variables.key);
+      if (setting?.category === 'security') {
+        invalidateSecuritySettingsCache();
+        queryClient.invalidateQueries({ queryKey: ['securitySettings'] });
+      }
+
+      toast({
+        title: 'Paramètre mis à jour',
+        description: 'Le paramètre a été enregistré avec succès.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Erreur',
+        description: `Impossible de mettre à jour le paramètre: ${error.message}`,
+      });
+    },
+  });
+
+  const handleSave = (key: string, value: string) => {
+    updateMutation.mutate({ key, value });
   };
-
-  const handleSave = (key: string) => {
-    const settingToSave = settingsState.find(s => s.key === key);
-    if (settingToSave) {
-      mutation.mutate({ key: settingToSave.key, value: settingToSave.value ?? "" });
-    }
-  };
-
-  // Categorize settings
-  const paymentSettings = settingsState.filter(s => s.key.includes('payment') || s.key.includes('deposit') || s.key.includes('withdrawal'));
-  const contractSettings = settingsState.filter(s => s.key.includes('contract') || s.key.includes('profit') || s.key.includes('roi'));
-  const systemSettings = settingsState.filter(s => !paymentSettings.includes(s) && !contractSettings.includes(s));
-
-  // Calculate stats
-  const totalSettings = settingsState.length;
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-[100px] rounded-lg" />
-          ))}
-        </div>
-        <Card>
-          <CardHeader><CardTitle>Paramètres Globaux</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
-    )
+    );
   }
 
-  const SettingsGroup = ({ settings }: { settings: Setting[] }) => (
-    <div className="space-y-6">
-      {settings.map((setting) => (
-        <div key={setting.key} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b last:border-0">
-          <div className="flex-1">
-            <Label htmlFor={setting.key} className="capitalize font-medium text-base">{setting.key.replace(/_/g, ' ')}</Label>
-            <p className="text-sm text-muted-foreground mt-1">{setting.description}</p>
-          </div>
-          <SettingControl
-            setting={setting}
-            handleInputChange={handleInputChange}
-            handleSave={handleSave}
-            mutation={mutation}
-          />
-        </div>
-      ))}
-    </div>
-  );
+  // Group settings by category
+  const settingsByCategory = settings?.reduce((acc, setting) => {
+    const category = setting.category || 'general';
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(setting);
+    return acc;
+  }, {} as Record<string, Setting[]>);
+
+  const categoryLabels: Record<string, { label: string; icon: any; description: string }> = {
+    general: {
+      label: 'Général',
+      icon: SettingsIcon,
+      description: 'Paramètres généraux de la plateforme',
+    },
+    security: {
+      label: 'Sécurité',
+      icon: Shield,
+      description: 'Configuration des fonctionnalités de sécurité',
+    },
+  };
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-        <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/20">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-sm text-muted-foreground">Total Paramètres</div>
-              <SettingsIcon className="h-4 w-4 text-blue-600" />
-            </div>
-            <div className="text-2xl font-bold text-blue-700">
-              {totalSettings}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Dans toute l'application
-            </p>
-          </CardContent>
-        </Card>
+      <Accordion type="multiple" defaultValue={['security', 'general']} className="space-y-4">
+        {Object.entries(settingsByCategory || {}).map(([category, categorySettings]) => {
+          const categoryInfo = categoryLabels[category] || {
+            label: category.charAt(0).toUpperCase() + category.slice(1),
+            icon: SettingsIcon,
+            description: `Paramètres ${category}`,
+          };
+          const Icon = categoryInfo.icon;
 
+          // Separate terms_content from other settings
+          const termsContentSetting = categorySettings.find(s => s.key === 'terms_content');
+          const regularSettings = categorySettings.filter(s => s.key !== 'terms_content');
 
+          return (
+            <AccordionItem key={category} value={category} className="border rounded-lg">
+              <AccordionTrigger className="px-6 hover:no-underline">
+                <div className="flex items-center gap-3">
+                  <Icon className="h-5 w-5" />
+                  <div className="text-left">
+                    <div className="font-semibold">{categoryInfo.label}</div>
+                    <div className="text-sm text-muted-foreground">{categoryInfo.description}</div>
+                  </div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-6">
+                <div className="space-y-6 pt-4">
+                  {/* Grid layout for regular settings (2 columns on desktop, 1 on mobile) */}
+                  {regularSettings.length > 0 && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {regularSettings.map((setting) => (
+                        <SettingControl
+                          key={setting.id}
+                          setting={setting}
+                          onSave={handleSave}
+                          isLoading={updateMutation.isPending}
+                        />
+                      ))}
+                    </div>
+                  )}
 
+                  {/* Full width for terms_content */}
+                  {termsContentSetting && (
+                    <SettingControl
+                      key={termsContentSetting.id}
+                      setting={termsContentSetting}
+                      onSave={handleSave}
+                      isLoading={updateMutation.isPending}
+                    />
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          );
+        })}
+      </Accordion>
+    </div>
+  );
+};
 
+// Component pour contrôler chaque type de setting
+const SettingControl = ({
+  setting,
+  onSave,
+  isLoading,
+}: {
+  setting: Setting;
+  onSave: (key: string, value: string) => void;
+  isLoading: boolean;
+}) => {
+  const [localValue, setLocalValue] = React.useState(setting.value);
+  const hasChanged = localValue !== setting.value;
+
+  React.useEffect(() => {
+    setLocalValue(setting.value);
+  }, [setting.value]);
+
+  const handleSave = () => {
+    if (hasChanged) {
+      onSave(setting.key, localValue);
+    }
+  };
+
+  return (
+    <div className={`flex ${setting.key === 'terms_content' ? 'flex-col' : 'flex-col'} gap-4 p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors h-full`}>
+      {/* Label + Description en haut */}
+      <div className="flex-1 min-w-0">
+        <Label htmlFor={setting.key} className="font-medium text-base">
+          {setting.label}
+        </Label>
+        {setting.description && (
+          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{setting.description}</p>
+        )}
       </div>
 
-      {/* Categorized Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Paramètres Globaux</CardTitle>
-          <CardDescription>Modifiez les paramètres de l'application. Ces changements sont appliqués en temps réel.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="paiements" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-6">
-              <TabsTrigger value="paiements" className="flex items-center gap-2">
-                <CreditCard className="h-4 w-4" />
-                <span className="hidden sm:inline">Paiements</span>
-                <span className="sm:hidden">💳</span>
-              </TabsTrigger>
-              <TabsTrigger value="contrats" className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                <span className="hidden sm:inline">Contrats</span>
-                <span className="sm:hidden">📄</span>
-              </TabsTrigger>
-              <TabsTrigger value="systeme" className="flex items-center gap-2">
-                <SettingsIcon className="h-4 w-4" />
-                <span className="hidden sm:inline">Système</span>
-                <span className="sm:hidden">⚙️</span>
-              </TabsTrigger>
-            </TabsList>
+      {/* Contrôle en bas */}
+      <div className="flex items-center gap-3 flex-shrink-0 justify-end">
+        {/* Special handling for terms_content */}
+        {setting.key === 'terms_content' && (
+          <div className="w-full">
+            <MarkdownEditor
+              value={localValue}
+              onChange={setLocalValue}
+              onSave={handleSave}
+              isSaving={isLoading}
+              hasChanged={hasChanged}
+            />
+          </div>
+        )}
 
-            <TabsContent value="paiements" className="space-y-4">
-              {paymentSettings.length > 0 ? (
-                <SettingsGroup settings={paymentSettings} />
-              ) : (
-                <p className="text-muted-foreground text-center py-8">Aucun paramètre de paiement configuré.</p>
-              )}
-            </TabsContent>
+        {/* Regular controls for other settings */}
+        {setting.key !== 'terms_content' && (
+          <>
+            {setting.type === 'boolean' && (
+              <>
+                <Switch
+                  id={setting.key}
+                  checked={localValue === 'true'}
+                  onCheckedChange={(checked) => {
+                    const newValue = checked.toString();
+                    setLocalValue(newValue);
+                    onSave(setting.key, newValue);
+                  }}
+                  disabled={isLoading}
+                />
+                <span className="text-sm font-medium min-w-[70px]">
+                  {localValue === 'true' ? '✅ Activé' : '❌ Désactivé'}
+                </span>
+              </>
+            )}
 
-            <TabsContent value="contrats" className="space-y-4">
-              {contractSettings.length > 0 ? (
-                <SettingsGroup settings={contractSettings} />
-              ) : (
-                <p className="text-muted-foreground text-center py-8">Aucun paramètre de contrat configuré.</p>
-              )}
-            </TabsContent>
+            {setting.type === 'text' && (
+              <>
+                <Input
+                  id={setting.key}
+                  value={localValue}
+                  onChange={(e) => setLocalValue(e.target.value)}
+                  disabled={isLoading}
+                  className="w-full"
+                />
+                <Button
+                  onClick={handleSave}
+                  disabled={!hasChanged || isLoading}
+                  size="sm"
+                  variant={hasChanged ? 'default' : 'outline'}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Sauvegarde...
+                    </>
+                  ) : hasChanged ? (
+                    '💾 Sauvegarder'
+                  ) : (
+                    '✓ Sauvegardé'
+                  )}
+                </Button>
+              </>
+            )}
 
-            <TabsContent value="systeme" className="space-y-4">
-              {systemSettings.length > 0 ? (
-                <SettingsGroup settings={systemSettings} />
-              ) : (
-                <p className="text-muted-foreground text-center py-8">Aucun paramètre système configuré.</p>
-              )}
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+            {setting.type === 'number' && (
+              <>
+                <Input
+                  id={setting.key}
+                  type="number"
+                  value={localValue}
+                  onChange={(e) => setLocalValue(e.target.value)}
+                  disabled={isLoading}
+                  className="w-full"
+                />
+                <Button
+                  onClick={handleSave}
+                  disabled={!hasChanged || isLoading}
+                  size="sm"
+                  variant={hasChanged ? 'default' : 'outline'}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Sauvegarde...
+                    </>
+                  ) : hasChanged ? (
+                    '💾 Sauvegarder'
+                  ) : (
+                    '✓ Sauvegardé'
+                  )}
+                </Button>
+              </>
+            )}
 
+            {setting.type === 'textarea' && (
+              <div className="flex flex-col gap-2 w-full">
+                <Textarea
+                  id={setting.key}
+                  value={localValue}
+                  onChange={(e) => setLocalValue(e.target.value)}
+                  disabled={isLoading}
+                  rows={4}
+                  className="w-full"
+                />
+                <Button
+                  onClick={handleSave}
+                  disabled={!hasChanged || isLoading}
+                  size="sm"
+                  variant={hasChanged ? 'default' : 'outline'}
+                  className="self-end"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Sauvegarde...
+                    </>
+                  ) : hasChanged ? (
+                    '💾 Sauvegarder'
+                  ) : (
+                    '✓ Sauvegardé'
+                  )}
+                </Button>
+              </div>
+            )}
 
+            {setting.type === 'select' && setting.options && (
+              <Select
+                value={localValue}
+                onValueChange={(value) => {
+                  setLocalValue(value);
+                  onSave(setting.key, value);
+                }}
+                disabled={isLoading}
+              >
+                <SelectTrigger id={setting.key} className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {setting.options.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 };

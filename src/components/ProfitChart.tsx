@@ -70,13 +70,13 @@ export const ProfitChart = ({ profits }: ProfitChartProps) => {
           >
             <defs>
               <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#4ade80" stopOpacity={0.7}/>
-                <stop offset="95%" stopColor="#4ade80" stopOpacity={0}/>
+                <stop offset="5%" stopColor="#4ade80" stopOpacity={0.7} />
+                <stop offset="95%" stopColor="#4ade80" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" strokeOpacity={0.3} />
             <XAxis dataKey="month" stroke="#cbd5e0" />
-            <YAxis stroke="#cbd5e0" tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`}/>
+            <YAxis stroke="#cbd5e0" tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`} />
             <Tooltip
               formatter={(value: number) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "USD" }).format(value)}
               labelFormatter={(label: string) => `${label}`}
@@ -96,6 +96,8 @@ export const ProfitChart = ({ profits }: ProfitChartProps) => {
               fillOpacity={1}
               fill="url(#colorProfit)"
               name="Profit Mensuel"
+              animationDuration={1200}
+              animationEasing="ease-in-out"
             />
           </AreaChart>
         </ResponsiveContainer>

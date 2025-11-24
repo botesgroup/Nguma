@@ -29,6 +29,7 @@ import Logout from "./pages/Logout";
 import { ProfileCompletionGuard } from "./components/ProfileCompletionGuard";
 import UpdatePassword from "./pages/UpdatePassword";
 import Setup2FA from "./pages/Setup2FA";
+import LoginAuditPage from "./pages/admin/LoginAuditPage";
 
 import Terms from "./pages/Terms";
 
@@ -177,6 +178,16 @@ const App = () => (
                 <AdminRoute>
                   <AppLayout>
                     <AdminUserContractsPage />
+                  </AppLayout>
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/login-audit"
+              element={
+                <AdminRoute>
+                  <AppLayout>
+                    <LoginAuditPage />
                   </AppLayout>
                 </AdminRoute>
               }

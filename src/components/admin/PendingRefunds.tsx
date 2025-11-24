@@ -13,13 +13,16 @@ import { Label } from "@/components/ui/label";
 import { MoreHorizontal } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { usePendingRefundsRealtime } from "@/hooks/useRealtimeSync";
 
 type ActionType = "approve" | "reject";
+
 interface DialogState {
   isOpen: boolean;
   action?: ActionType;
   contractId?: string;
 }
+
 type PendingRefund = {
   id: string;
   user_id: string;
@@ -34,6 +37,9 @@ type PendingRefund = {
 };
 
 export const PendingRefunds = () => {
+  // Enable Realtime synchronization for pending refunds
+  usePendingRefundsRealtime();
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 

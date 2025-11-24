@@ -13,6 +13,11 @@ export interface MFAEnrollment {
     uri: string;
 }
 
+export interface BackupCodesResult {
+    codes: string[];
+    success: boolean;
+}
+
 export function use2FA() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
@@ -160,12 +165,73 @@ export function use2FA() {
         return factors.length > 0;
     };
 
+    /**
+     * Générer 10 codes de backup pour la récupération 2FA
+     * À appeler après la vérification réussie du code TOTP
+     */
+    const generateBackupCodes = async (): Promise<BackupCodesResult> => {
+        setIsLoading(true);
+        try {
+            // Générer 10 codes aléatoires (8 caractères alphanumériques)
+            const codes = Array.from({ length: 10 }, () => {
+                const randomString = Math.random().toString(36).substring(2, 10);
+                return randomString.toUpperCase();
+            });
+
+            // Récupérer l'utilisateur courant
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            if (userError || !user) {
+                console.error('Get user error:', userError);
+                toast({
+                    variant: 'destructive',
+                    title: 'Erreur',
+                    description: 'Impossible de récupérer les informations utilisateur.',
+                });
+                return { codes: [], success: false };
+            }
+
+            // Supprimer les anciens codes de backup (si existants)
+            await supabase
+                .from('backup_codes' as any)
+                .delete()
+                .eq('user_id', user.id);
+
+            // Insérer les nouveaux codes
+            const { error: insertError } = await supabase
+                .from('backup_codes' as any)
+                .insert(
+                    codes.map(code => ({
+                        user_id: user.id,
+                        code: code,
+                    }))
+                );
+
+            if (insertError) {
+                console.error('Insert backup codes error:', insertError);
+                toast({
+                    variant: 'destructive',
+                    title: 'Erreur',
+                    description: 'Impossible de générer les codes de backup.',
+                });
+                return { codes: [], success: false };
+            }
+
+            return { codes, success: true };
+        } catch (err) {
+            console.error('Generate backup codes exception:', err);
+            return { codes: [], success: false };
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return {
         enroll,
         verify,
         unenroll,
         listFactors,
         is2FAEnabled,
+        generateBackupCodes,
         isLoading,
     };
 }

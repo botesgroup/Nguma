@@ -18,8 +18,24 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { TrendingUp } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { differenceInDays } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  useUserTransactionsRealtime,
+  useUserContractsRealtime,
+  useUserProfitsRealtime,
+} from "@/hooks/useRealtimeSync";
 
 const Dashboard = () => {
+  // Get current user ID for Realtime filtering
+  const { data: { user } = {} } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: async () => supabase.auth.getUser(),
+  });
+
+  // Enable Realtime synchronization for this user
+  useUserTransactionsRealtime(user?.id);
+  useUserContractsRealtime(user?.id);
+  useUserProfitsRealtime(user?.id);
   const { data: wallet, isLoading: isLoadingWallet } = useQuery({
     queryKey: ["wallet"],
     queryFn: getWallet,

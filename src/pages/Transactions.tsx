@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getAllTransactions } from "@/services/transactionService";
 import { getWallet } from "@/services/walletService";
+import { supabase } from "@/integrations/supabase/client";
+import { useUserTransactionsRealtime } from "@/hooks/useRealtimeSync";
 import { formatCurrency } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,6 +23,15 @@ import {
 } from "@/components/ui/pagination";
 
 const TransactionsPage = () => {
+  // Get current user ID for Realtime filtering
+  const { data: { user } = {} } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: async () => supabase.auth.getUser(),
+  });
+
+  // Enable Realtime synchronization for transactions
+  useUserTransactionsRealtime(user?.id);
+
   const [transactionType, setTransactionType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);

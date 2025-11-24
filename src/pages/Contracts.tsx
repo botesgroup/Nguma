@@ -8,8 +8,18 @@ import { formatCurrency } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, DollarSign, Award } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useUserContractsRealtime } from "@/hooks/useRealtimeSync";
 
 const ContractsPage = () => {
+  // Get current user ID for Realtime filtering
+  const { data: { user } = {} } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: async () => supabase.auth.getUser(),
+  });
+
+  // Enable Realtime synchronization for contracts
+  useUserContractsRealtime(user?.id);
   const { data: contracts, isLoading } = useQuery({
     queryKey: ["contracts"],
     queryFn: getContracts,

@@ -122,3 +122,44 @@ export const getPriorityBadgeColor = (priority?: string) => {
     default: return 'bg-blue-500';
   }
 };
+
+/**
+ * Delete all read notifications for the current user.
+ */
+export const deleteReadNotifications = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { error } = await supabase
+    .from('notifications')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('is_read', true);
+
+  if (error) throw new Error("Could not delete read notifications.");
+};
+
+/**
+ * Get unread count by type for the current user.
+ */
+export const getUnreadCountByType = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return {};
+
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('type')
+    .eq('user_id', user.id)
+    .eq('is_read', false);
+
+  if (error) throw new Error("Could not fetch unread count by type.");
+
+  // Count by type
+  const countByType: Record<string, number> = {};
+  (data || []).forEach(notif => {
+    const type = notif.type || 'system';
+    countByType[type] = (countByType[type] || 0) + 1;
+  });
+
+  return countByType;
+};

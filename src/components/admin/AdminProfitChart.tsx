@@ -64,21 +64,23 @@ export const AdminProfitChart = () => {
           <AreaChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
             <defs>
               <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#00FF41" stopOpacity={0.4}/>
-                <stop offset="95%" stopColor="#00FF41" stopOpacity={0}/>
+                <stop offset="5%" stopColor="#00FF41" stopOpacity={0.4} />
+                <stop offset="95%" stopColor="#00FF41" stopOpacity={0} />
               </linearGradient>
             </defs>
             <XAxis dataKey="month_year" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
             <YAxis stroke="#a1a1aa" fontSize={13} tickLine={false} axisLine={false} tickFormatter={(value) => formatCompactNumber(value)} />
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#00FF41', strokeWidth: 1, strokeDasharray: '3 3' }} />
-            <Area 
-              type="monotone" 
-              dataKey="Total Profit" 
-              stroke="#00FF41" 
+            <Area
+              type="monotone"
+              dataKey="Total Profit"
+              stroke="#00FF41"
               strokeWidth={2}
-              fillOpacity={1} 
-              fill="url(#colorProfit)" 
-              activeDot={{ r: 6, strokeWidth: 2, fill: '#000', stroke: '#00FF41' }} 
+              fillOpacity={1}
+              fill="url(#colorProfit)"
+              activeDot={{ r: 6, strokeWidth: 2, fill: '#000', stroke: '#00FF41' }}
+              animationDuration={1200}
+              animationEasing="ease-in-out"
             />
           </AreaChart>
         </ResponsiveContainer>

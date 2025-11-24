@@ -59,16 +59,16 @@ export const CashFlowChart = () => {
               labelStyle={{ color: "#EAEAEA" }}
               formatter={(value: number, name: string) => [formatCurrency(value), name === 'Deposits' ? 'Dépôts' : 'Retraits']}
             />
-            <Legend 
-              wrapperStyle={{ fontSize: "14px" }} 
+            <Legend
+              wrapperStyle={{ fontSize: "14px" }}
               formatter={(value) => {
                 if (value === 'Deposits') return 'Dépôts';
                 if (value === 'Withdrawals') return 'Retraits';
                 return value;
               }}
             />
-            <Bar dataKey="Deposits" fill="#00FF41" radius={[4, 4, 0, 0]} isAnimationActive={false} />
-            <Bar dataKey="Withdrawals" fill="#FF4136" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+            <Bar dataKey="Deposits" fill="#00FF41" radius={[4, 4, 0, 0]} animationDuration={800} animationEasing="ease-in-out" />
+            <Bar dataKey="Withdrawals" fill="#FF4136" radius={[4, 4, 0, 0]} animationDuration={800} animationEasing="ease-in-out" />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

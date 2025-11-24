@@ -171,3 +171,91 @@ export function downloadAuditLogsCSV(logs: AuditLog[], filename: string = 'audit
     link.click();
     document.body.removeChild(link);
 }
+
+// ============================================================================
+// LOGIN AUDIT (Phase 3: Security Improvements)
+// ============================================================================
+
+export interface LoginAttemptParams {
+    email: string;
+    success: boolean;
+    userId?: string;
+    errorMessage?: string;
+}
+
+/**
+ * Logger une tentative de connexion (succès ou échec)
+ * Capture automatiquement l'IP et le User-Agent
+ */
+export const logLoginAttempt = async ({
+    email,
+    success,
+    userId,
+    errorMessage,
+}: LoginAttemptParams): Promise<void> => {
+    try {
+        // Récupérer l'adresse IP du client (via API tierce)
+        let ipAddress = 'unknown';
+        try {
+            const ipResponse = await fetch('https://api.ipify.org?format=json');
+            const ipData = await ipResponse.json();
+            ipAddress = ipData.ip;
+        } catch (ipError) {
+            console.warn('Could not fetch IP address:', ipError);
+        }
+
+        // Récupérer le User-Agent
+        const userAgent = navigator.userAgent;
+
+        // Appeler la fonction RPC pour logger
+        const { error } = await supabase.rpc('log_login_attempt', {
+            p_email: email,
+            p_success: success,
+            p_user_id: userId || null,
+            p_ip_address: ipAddress,
+            p_user_agent: userAgent,
+            p_error_message: errorMessage || null,
+        });
+
+        if (error) {
+            console.error('Failed to log login attempt:', error);
+        }
+    } catch (err) {
+        // Ne pas faire échouer la connexion si le logging échoue
+        console.error('Exception while logging login attempt:', err);
+    }
+};
+
+/**
+ * Récupérer les tentatives de connexion échouées récentes pour un email
+ * Utile pour le rate limiting complémentaire
+ */
+export const getRecentFailedLogins = async (
+    email: string,
+    minutes: number = 30
+): Promise<{ count: number; lastAttempt: Date | null }> => {
+    try {
+        const { data, error } = await supabase.rpc('get_recent_failed_logins', {
+            p_email: email,
+            p_minutes: minutes,
+        });
+
+        if (error) {
+            console.error('Failed to get recent failed logins:', error);
+            return { count: 0, lastAttempt: null };
+        }
+
+        if (data && data.length > 0) {
+            return {
+                count: parseInt(data[0].attempt_count) || 0,
+                lastAttempt: data[0].last_attempt ? new Date(data[0].last_attempt) : null,
+            };
+        }
+
+        return { count: 0, lastAttempt: null };
+    } catch (err) {
+        console.error('Exception while getting recent failed logins:', err);
+        return { count: 0, lastAttempt: null };
+    }
+};
+

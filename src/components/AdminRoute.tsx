@@ -3,8 +3,16 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getSecuritySettings } from "@/services/securitySettingsService";
 
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  // Get security settings
+  const { data: securitySettings } = useQuery({
+    queryKey: ["securitySettings"],
+    queryFn: getSecuritySettings,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
   const { data: userRole, isLoading } = useQuery({
     queryKey: ["userRole"],
     queryFn: async () => {
@@ -21,7 +29,19 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
     },
   });
 
-  if (isLoading) {
+  // Check if admin has 2FA enabled
+  const { data: has2FA, isLoading: isLoading2FA } = useQuery({
+    queryKey: ["has2FA"],
+    queryFn: async () => {
+      if (userRole !== 'admin') return true; // Only check for admins
+
+      const { data } = await supabase.auth.mfa.listFactors();
+      return data?.totp?.some(f => f.status === 'verified') || false;
+    },
+    enabled: userRole === 'admin', // Only run if user is admin
+  });
+
+  if (isLoading || isLoading2FA) {
     return (
       <div className="p-8 space-y-4">
         <Skeleton className="h-10 w-1/3" />
@@ -38,6 +58,11 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
     // Redirect them to the home page, but replace the current entry in the
     // history stack so the user can't "go back" to the admin page.
     return <Navigate to="/dashboard" replace />;
+  }
+
+  // Only enforce 2FA if setting is enabled
+  if (userRole === 'admin' && securitySettings?.twoFactorMandatoryForAdmins && has2FA === false) {
+    return <Navigate to="/setup-2fa" replace />;
   }
 
   return children;

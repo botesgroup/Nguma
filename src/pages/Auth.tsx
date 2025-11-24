@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { z } from "zod";
 import { checkRateLimit, formatRateLimitReset } from "@/services/rateLimitService";
+import { logLoginAttempt } from "@/services/auditService";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -114,6 +115,7 @@ const Auth = () => {
   const [showMFAInput, setShowMFAInput] = useState(false);
   const [mfaFactorId, setMfaFactorId] = useState<string>("");
   const [mfaCode, setMfaCode] = useState("");
+  const [useBackupCode, setUseBackupCode] = useState(false);
 
   const handleSignIn = async (values: z.infer<typeof signInSchema>) => {
     setIsLoading(true);
@@ -164,6 +166,13 @@ const Auth = () => {
       }
 
       if (signInData.user) {
+        // Log successful login
+        await logLoginAttempt({
+          email: values.email,
+          success: true,
+          userId: signInData.user.id,
+        });
+
         const { data: roleData } = await supabase
           .from("user_roles")
           .select("role")
@@ -174,6 +183,13 @@ const Auth = () => {
         navigate(from);
       }
     } catch (error: any) {
+      // Log failed login
+      await logLoginAttempt({
+        email: values.email,
+        success: false,
+        errorMessage: error.message,
+      });
+
       // Handle specific MFA error if Supabase throws one (depends on project settings)
       console.error("Login error:", error);
       toast({
@@ -218,6 +234,52 @@ const Auth = () => {
         variant: "destructive",
         title: "Erreur 2FA",
         description: error.message || "Code incorrect.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBackupCodeLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      // Verify backup code via RPC
+      const { data, error } = await supabase.rpc('verify_backup_code', {
+        p_code: mfaCode,
+      });
+
+      if (error || !data || data.length === 0 || !data[0].valid) {
+        toast({
+          variant: "destructive",
+          title: "Code invalide",
+          description: "Ce code de récupération est invalide ou déjà utilisé.",
+        });
+        return;
+      }
+
+      toast({
+        title: "Authentification réussie",
+        description: "Connexion sécurisée avec code de récupération.",
+      });
+
+      // Get user role and navigate
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .single();
+
+        const from = location.state?.from || (roleData?.role === 'admin' ? "/admin" : "/dashboard");
+        navigate(from);
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: error.message || "Code de récupération incorrect.",
       });
     } finally {
       setIsLoading(false);
@@ -317,24 +379,44 @@ const Auth = () => {
 
               <TabsContent value="signin">
                 {showMFAInput ? (
-                  <form onSubmit={handleMFAVerify} className="space-y-4">
+                  <form onSubmit={useBackupCode ? handleBackupCodeLogin : handleMFAVerify} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="mfa-code">Code d'authentification (2FA)</Label>
+                      <Label htmlFor="mfa-code">
+                        {useBackupCode ? "Code de récupération" : "Code d'authentification (2FA)"}
+                      </Label>
                       <Input
                         id="mfa-code"
-                        placeholder="123456"
+                        placeholder={useBackupCode ? "ABCD1234" : "123456"}
                         value={mfaCode}
                         onChange={(e) => setMfaCode(e.target.value)}
-                        maxLength={6}
+                        maxLength={useBackupCode ? 8 : 6}
                         className="text-center text-lg tracking-widest"
                         autoFocus
                       />
                       <p className="text-xs text-muted-foreground">
-                        Ouvrez votre application d'authentification (Google Authenticator, Authy...) pour obtenir le code.
+                        {useBackupCode
+                          ? "Entrez l'un de vos codes de récupération sauvegardés lors de la configuration 2FA."
+                          : "Ouvrez votre application d'authentification (Google Authenticator, Authy...) pour obtenir le code."
+                        }
                       </p>
                     </div>
-                    <Button type="submit" className="w-full" disabled={isLoading || mfaCode.length !== 6}>
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={isLoading || (useBackupCode ? mfaCode.length !== 8 : mfaCode.length !== 6)}
+                    >
                       {isLoading ? "Vérification..." : "Vérifier"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      type="button"
+                      className="w-full"
+                      onClick={() => {
+                        setUseBackupCode(!useBackupCode);
+                        setMfaCode("");
+                      }}
+                    >
+                      {useBackupCode ? "Utiliser l'app d'authentification" : "Utiliser un code de récupération"}
                     </Button>
                     <Button variant="ghost" type="button" className="w-full" onClick={() => setShowMFAInput(false)}>
                       Retour

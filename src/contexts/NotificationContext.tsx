@@ -61,13 +61,62 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Play sound only when the unread count increases
     if (prevUnreadCount !== undefined && unreadCount > prevUnreadCount) {
-      const audio = new Audio('/notification.mp3');
-      audio.play().catch(error => {
-        // Autoplay was prevented by the browser.
-        console.warn("Notification sound was blocked by the browser. User interaction is required to enable sound.", error);
-      });
+      playNotificationSound();
     }
   }, [unreadCount, prevUnreadCount]);
+
+  // Fonction pour jouer le son de notification
+  const playNotificationSound = () => {
+    // Essayer de charger le fichier audio
+    const audio = new Audio('/notification.mp3');
+
+    audio.play().catch((error) => {
+      // Si le fichier n'existe pas ou autoplay bloqué, utiliser Web Audio API
+      console.warn("Notification sound file not available, using Web Audio API fallback", error);
+
+      try {
+        // Créer un son simple avec Web Audio API
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        // Connexion
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        // Configuration du son (deux bips courts)
+        oscillator.frequency.value = 800; // Fréquence en Hz
+        oscillator.type = 'sine';
+
+        // Envelope pour éviter les clics
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
+        gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.15);
+
+        // Premier bip
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.15);
+
+        // Deuxième bip
+        const oscillator2 = audioContext.createOscillator();
+        const gainNode2 = audioContext.createGain();
+        oscillator2.connect(gainNode2);
+        gainNode2.connect(audioContext.destination);
+
+        oscillator2.frequency.value = 1000;
+        oscillator2.type = 'sine';
+
+        gainNode2.gain.setValueAtTime(0, audioContext.currentTime + 0.2);
+        gainNode2.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.21);
+        gainNode2.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.35);
+
+        oscillator2.start(audioContext.currentTime + 0.2);
+        oscillator2.stop(audioContext.currentTime + 0.35);
+      } catch (audioError) {
+        console.warn("Web Audio API also failed, notification will be silent", audioError);
+      }
+    });
+  };
 
   const value = {
     notifications: notifications || [],
