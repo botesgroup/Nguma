@@ -26,16 +26,17 @@ export const getContracts = async (): Promise<Contract[]> => {
 /**
  * Creates a new investment contract for the user by calling a database RPC function.
  */
-export const createContract = async (amount: number) => {
-  const { data, error } = await supabase.rpc('create_new_contract', { 
-    investment_amount: amount 
+export const createContract = async (amount: number, isInsured: boolean = false) => {
+  const { data, error } = await supabase.rpc('create_new_contract', {
+    investment_amount: amount,
+    p_is_insured: isInsured
   });
 
   if (error) {
     console.error("Error creating contract:", error.message);
     throw new Error("Failed to create contract.");
   }
-  const response = data as unknown as { success: boolean; error?: string };
+  const response = data as unknown as { success: boolean; error?: string; insurance_fee?: number; net_amount?: number };
   if (response && !response.success) {
     throw new Error(response.error || "An unknown error occurred in the database function.");
   }
@@ -68,8 +69,8 @@ export const requestRefund = async (contractId: string) => {
  * Creates a new investment contract using the user's profit balance.
  */
 export const reinvestProfit = async (amount: number) => {
-  const { data, error } = await supabase.rpc('reinvest_from_profit', { 
-    reinvestment_amount: amount 
+  const { data, error } = await supabase.rpc('reinvest_from_profit', {
+    reinvestment_amount: amount
   });
 
   if (error) {

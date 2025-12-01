@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Wallet, FileText, TrendingUp, Settings, Users } from "lucide-react";
+import { LayoutDashboard, Wallet, FileText, TrendingUp, Settings, Users, MessageCircle, BookOpen } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -19,6 +19,7 @@ const investorItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Mes Contrats", url: "/contracts", icon: FileText },
   { title: "Transactions", url: "/transactions", icon: TrendingUp },
+  { title: "Support", url: "/support", icon: MessageCircle },
 ];
 
 const adminItems = [
@@ -28,6 +29,8 @@ const adminItems = [
   { title: "Remboursements en attente", url: "/admin/refunds", icon: FileText },
   { title: "Gestion Contrats", url: "/admin/contracts", icon: FileText },
   { title: "Utilisateurs", url: "/admin/users", icon: Users },
+  { title: "Support Chat", url: "/admin/support", icon: MessageCircle },
+  { title: "Base de Connaissances", url: "/admin/knowledge", icon: BookOpen },
   { title: "Paramètres", url: "/admin/settings", icon: Settings },
 ];
 
@@ -41,8 +44,18 @@ export function AppSidebar() {
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
-      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id).single();
-      return data?.role;
+      // Récupérer tous les rôles de l'utilisateur (peut être 0, 1 ou plusieurs)
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+
+      // Retourner null si erreur ou aucun rôle trouvé
+      if (error || !data || data.length === 0) return null;
+
+      // Si plusieurs rôles, prioriser 'admin' sinon retourner le premier
+      const roles = data.map(r => r.role);
+      return roles.includes('admin') ? 'admin' : roles[0];
     },
   });
 

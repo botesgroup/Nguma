@@ -1,6 +1,11 @@
 -- Migration: Fonctions de Rate Limiting
 -- Description: Crée les fonctions check_rate_limit et admin_unblock_rate_limit pour la gestion des limites de taux
 
+-- Supprimer les anciennes versions des fonctions si elles existent
+-- (nécessaire car on ne peut pas changer le type de retour avec CREATE OR REPLACE)
+DROP FUNCTION IF EXISTS public.check_rate_limit(TEXT, TEXT, INTEGER, INTEGER);
+DROP FUNCTION IF EXISTS public.admin_unblock_rate_limit(TEXT, TEXT);
+
 -- Fonction pour vérifier et incrémenter le compteur de rate limiting
 CREATE OR REPLACE FUNCTION public.check_rate_limit(
     p_identifier TEXT,

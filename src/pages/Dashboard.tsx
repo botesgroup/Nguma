@@ -31,7 +31,7 @@ const Dashboard = () => {
     queryKey: ["currentUser"],
     queryFn: async () => supabase.auth.getUser(),
   });
-  const user = userResponse?.data.user;
+  const user = userResponse?.data?.user;
 
   // Enable Realtime synchronization for this user
   useUserTransactionsRealtime(user?.id);

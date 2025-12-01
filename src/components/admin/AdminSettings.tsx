@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Loader2, Shield, Settings as SettingsIcon, CreditCard } from 'lucide-react';
+import { Loader2, Shield, Settings as SettingsIcon, CreditCard, ShieldCheck } from 'lucide-react';
 import { invalidateSecuritySettingsCache } from '@/services/securitySettingsService';
 import { MarkdownEditor } from '@/components/MarkdownEditor';
 import { PaymentMethodsManager } from '@/components/admin/PaymentMethodsManager';
@@ -110,6 +110,11 @@ export const AdminSettings = () => {
       icon: Shield,
       description: 'Configuration des fonctionnalités de sécurité',
     },
+    insurance: {
+      label: 'Assurance des Contrats',
+      icon: ShieldCheck,
+      description: 'Configuration du système d\'assurance optionnel des contrats',
+    },
     payment_methods: {
       label: 'Moyens de Paiement',
       icon: CreditCard,
@@ -119,7 +124,7 @@ export const AdminSettings = () => {
 
   return (
     <div className="space-y-6">
-      <Accordion type="multiple" defaultValue={['security', 'general', 'payment_methods']} className="space-y-4">
+      <Accordion type="multiple" defaultValue={['security', 'general', 'insurance', 'payment_methods']} className="space-y-4">
         {Object.entries(settingsByCategory || {}).map(([category, categorySettings]) => {
           const categoryInfo = categoryLabels[category] || {
             label: category.charAt(0).toUpperCase() + category.slice(1),

@@ -19,7 +19,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { requestRefund } from "@/services/contractService"; // Changed import
 
 import { useToast } from "@/components/ui/use-toast";
-import { AlertTriangle, Download, Clock, Sparkles, TrendingUp } from "lucide-react";
+import { AlertTriangle, Download, Clock, Sparkles, TrendingUp, Shield } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type ContractData = Database['public']['Tables']['contracts']['Row'];
 
@@ -118,6 +124,21 @@ export const ContractCard = ({ contract, formatCurrency }: ContractCardProps) =>
                   ROI: +{((totalProfitPaid / Number(contract.amount)) * 100).toFixed(1)}%
                 </Badge>
               )}
+              {contract.is_insured && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs flex items-center gap-1">
+                        <Shield className="h-3 w-3" />
+                        Assuré
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Ce contrat bénéficie d'une assurance garantissant un remboursement intégral</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
           </div>
           <Badge variant={getStatusVariant(contract.status)} className="capitalize">{contract.status}</Badge>
@@ -139,6 +160,19 @@ export const ContractCard = ({ contract, formatCurrency }: ContractCardProps) =>
             <span className="text-muted-foreground">Profits versés</span>
             <span className="font-semibold text-green-600">
               +{formatCurrency(totalProfitPaid)}
+            </span>
+          </div>
+        )}
+
+        {/* Frais d'assurance payés */}
+        {contract.is_insured && Number(contract.insurance_fee_paid) > 0 && (
+          <div className="flex justify-between items-center text-sm bg-indigo-50 p-2 rounded-lg">
+            <span className="text-muted-foreground flex items-center gap-1">
+              <Shield className="h-3 w-3" />
+              Frais d'assurance
+            </span>
+            <span className="font-semibold text-indigo-600">
+              {formatCurrency(Number(contract.insurance_fee_paid))}
             </span>
           </div>
         )}
@@ -172,7 +206,20 @@ export const ContractCard = ({ contract, formatCurrency }: ContractCardProps) =>
               <div className="flex justify-between"><span>Montant investi :</span> <span className="font-medium">{formatCurrency(Number(contract.amount))}</span></div>
               <div className="flex justify-between"><span>Profits déjà versés :</span> <span className="font-medium text-destructive">- {formatCurrency(totalProfitPaid)}</span></div>
               <hr className="my-2 border-border" />
-              <div className="flex justify-between text-base"><strong>Montant qui sera remboursé :</strong> <strong className="text-primary">{formatCurrency(refundAmount)}</strong></div>
+              {contract.is_insured && (
+                <div className="bg-indigo-50 p-2 rounded-lg mb-2">
+                  <div className="flex items-center gap-2 text-indigo-700 font-medium">
+                    <Shield className="h-4 w-4" />
+                    Contrat assuré - Remboursement intégral garanti
+                  </div>
+                </div>
+              )}
+              <div className="flex justify-between text-base">
+                <strong>Montant qui sera remboursé :</strong>
+                <strong className="text-primary">
+                  {contract.is_insured ? formatCurrency(Number(contract.amount)) : formatCurrency(refundAmount)}
+                </strong>
+              </div>
             </div>
             <DialogFooter className="flex flex-col items-center gap-4 pt-4">
               <Button variant="secondary" onClick={() => setIsDialogOpen(false)} className="w-full sm:w-auto">Fermer</Button>

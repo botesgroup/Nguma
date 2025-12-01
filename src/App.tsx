@@ -30,6 +30,10 @@ import { ProfileCompletionGuard } from "./components/ProfileCompletionGuard";
 import UpdatePassword from "./pages/UpdatePassword";
 import Setup2FA from "./pages/Setup2FA";
 import LoginAuditPage from "./pages/admin/LoginAuditPage";
+import SupportPage from "./pages/SupportPage";
+import AdminSupportPage from "./pages/admin/AdminSupportPage";
+import AdminKnowledgePage from "./pages/admin/AdminKnowledgePage";
+import { ChatButton } from "./components/ChatButton";
 
 import Terms from "./pages/Terms";
 
@@ -44,6 +48,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => (
           <AppHeader />
           <main className="flex-1">{children}</main>
         </div>
+        <ChatButton />
       </div>
     </ProfileCompletionGuard>
   </SidebarProvider>
@@ -190,6 +195,36 @@ const App = () => (
                     <LoginAuditPage />
                   </AppLayout>
                 </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/support"
+              element={
+                <AdminRoute>
+                  <AppLayout>
+                    <AdminSupportPage />
+                  </AppLayout>
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/knowledge"
+              element={
+                <AdminRoute>
+                  <AppLayout>
+                    <AdminKnowledgePage />
+                  </AppLayout>
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/support"
+              element={
+                <ProtectedRoute>
+                  <AppLayout>
+                    <SupportPage />
+                  </AppLayout>
+                </ProtectedRoute>
               }
             />
             <Route path="/logout" element={<Logout />} />

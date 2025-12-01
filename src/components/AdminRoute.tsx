@@ -19,13 +19,15 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", user.id)
-        .single();
+        .eq("user_id", user.id);
 
-      return data?.role;
+      if (error || !data || data.length === 0) return null;
+
+      const roles = data.map(r => r.role);
+      return roles.includes('admin') ? 'admin' : roles[0];
     },
   });
 

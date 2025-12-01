@@ -24,7 +24,7 @@ export const NotificationBell = () => {
     queryKey: ["currentUser"],
     queryFn: async () => supabase.auth.getUser(),
   });
-  const user = userResponse?.data.user;
+  const user = userResponse?.data?.user;
 
   // Enable Realtime synchronization for notifications
   useUserNotificationsRealtime(user?.id);

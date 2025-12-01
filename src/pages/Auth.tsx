@@ -176,10 +176,11 @@ const Auth = () => {
         const { data: roleData } = await supabase
           .from("user_roles")
           .select("role")
-          .eq("user_id", signInData.user.id)
-          .single();
+          .eq("user_id", signInData.user.id);
 
-        const from = location.state?.from || (roleData?.role === 'admin' ? "/admin" : "/dashboard");
+        const roles = roleData?.map(r => r.role) || [];
+        const userRole = roles.includes('admin') ? 'admin' : (roles[0] || null);
+        const from = location.state?.from || (userRole === 'admin' ? "/admin" : "/dashboard");
         navigate(from);
       }
     } catch (error: any) {
@@ -223,10 +224,11 @@ const Auth = () => {
         const { data: roleData } = await supabase
           .from("user_roles")
           .select("role")
-          .eq("user_id", user.id)
-          .single();
+          .eq("user_id", user.id);
 
-        const from = location.state?.from || (roleData?.role === 'admin' ? "/admin" : "/dashboard");
+        const roles = roleData?.map(r => r.role) || [];
+        const userRole = roles.includes('admin') ? 'admin' : (roles[0] || null);
+        const from = location.state?.from || (userRole === 'admin' ? "/admin" : "/dashboard");
         navigate(from);
       }
     } catch (error: any) {
@@ -269,10 +271,11 @@ const Auth = () => {
         const { data: roleData } = await supabase
           .from("user_roles")
           .select("role")
-          .eq("user_id", user.id)
-          .single();
+          .eq("user_id", user.id);
 
-        const from = location.state?.from || (roleData?.role === 'admin' ? "/admin" : "/dashboard");
+        const roles = roleData?.map(r => r.role) || [];
+        const userRole = roles.includes('admin') ? 'admin' : (roles[0] || null);
+        const from = location.state?.from || (userRole === 'admin' ? "/admin" : "/dashboard");
         navigate(from);
       }
     } catch (error: any) {
