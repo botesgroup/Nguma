@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { PlusCircle, Shield, Info } from "lucide-react";
+import { PlusCircle, Shield, Info, BookOpen } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContract } from "@/services/contractService";
 import { getWallet } from "@/services/walletService";
@@ -57,6 +57,7 @@ export const NewContractDialog = () => {
   const insuranceFeePercent = parseFloat(settings?.find(s => s.key === 'insurance_fee_percent')?.value || '0');
   const insuranceFeeFixed = parseFloat(settings?.find(s => s.key === 'insurance_fee_fixed')?.value || '0');
   const insuranceApplyBoth = settings?.find(s => s.key === 'insurance_apply_both')?.value === 'true';
+  const contractPdfUrl = settings?.find(s => s.key === 'contract_explanation_pdf_url')?.value;
 
   // Calculer les frais d'assurance
   const calculateInsuranceFee = (amt: number): number => {
@@ -217,6 +218,24 @@ export const NewContractDialog = () => {
               </div>
             )}
 
+            {contractPdfUrl && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full">
+                    <BookOpen className="mr-2 h-4 w-4" />
+                    LIRE LE CONTRAT
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl h-[90vh] p-2">
+                  <iframe 
+                    src={`${contractPdfUrl}#toolbar=0`}
+                    className="w-full h-full rounded-md"
+                    title="Explication du Contrat PDF"
+                  />
+                </DialogContent>
+              </Dialog>
+            )}
+
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="terms"
@@ -227,7 +246,7 @@ export const NewContractDialog = () => {
                 htmlFor="terms"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
-                J'ai lu et j'accepte les <a href="/terms" className="text-primary hover:underline">termes et conditions du contrat</a>
+                J'ai lu et j'accepte les termes et conditions du contrat
               </label>
             </div>
           </div>

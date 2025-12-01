@@ -12,8 +12,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Loader2, Shield, Settings as SettingsIcon, CreditCard, ShieldCheck } from 'lucide-react';
 import { invalidateSecuritySettingsCache } from '@/services/securitySettingsService';
-import { WysiwygEditor } from '@/components/WysiwygEditor'; // Changed import
+import { WysiwygEditor } from '@/components/WysiwygEditor';
 import { PaymentMethodsManager } from '@/components/admin/PaymentMethodsManager';
+import { FileUploadControl } from '@/components/admin/FileUploadControl'; // Added import
 
 interface Setting {
   id: string;
@@ -133,9 +134,10 @@ export const AdminSettings = () => {
           };
           const Icon = categoryInfo.icon;
 
-          // Separate terms_content from other settings
+          // Separate special settings from other settings
           const termsContentSetting = categorySettings.find(s => s.key === 'terms_content');
-          const regularSettings = categorySettings.filter(s => s.key !== 'terms_content');
+          const pdfUrlSetting = categorySettings.find(s => s.key === 'contract_explanation_pdf_url');
+          const regularSettings = categorySettings.filter(s => s.key !== 'terms_content' && s.key !== 'contract_explanation_pdf_url');
 
           return (
             <AccordionItem key={category} value={category} className="border rounded-lg">
@@ -150,7 +152,7 @@ export const AdminSettings = () => {
               </AccordionTrigger>
               <AccordionContent className="px-6 pb-6">
                 <div className="space-y-6 pt-4">
-                  {/* Grid layout for regular settings (2 columns on desktop, 1 on mobile) */}
+                  {/* Grid layout for regular settings */}
                   {regularSettings.length > 0 && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {regularSettings.map((setting) => (
@@ -164,7 +166,15 @@ export const AdminSettings = () => {
                     </div>
                   )}
 
-                  {/* Full width for terms_content */}
+                  {/* Full width for special settings */}
+                  {pdfUrlSetting && (
+                    <SettingControl
+                      key={pdfUrlSetting.id}
+                      setting={pdfUrlSetting}
+                      onSave={handleSave}
+                      isLoading={updateMutation.isPending}
+                    />
+                  )}
                   {termsContentSetting && (
                     <SettingControl
                       key={termsContentSetting.id}
@@ -268,8 +278,20 @@ const SettingControl = ({
           </div>
         )}
 
+        {/* Special handling for PDF upload */}
+        {setting.key === 'contract_explanation_pdf_url' && (
+          <div className="w-full">
+            <FileUploadControl
+              value={localValue}
+              onSave={(newUrl) => onSave(setting.key, newUrl)}
+              storageBucket="documents"
+              label={setting.label}
+            />
+          </div>
+        )}
+
         {/* Regular controls for other settings */}
-        {setting.key !== 'terms_content' && (
+        {setting.key !== 'terms_content' && setting.key !== 'contract_explanation_pdf_url' && (
           <>
             {setting.type === 'boolean' && (
               <>

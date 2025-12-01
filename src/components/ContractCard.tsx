@@ -183,49 +183,50 @@ export const ContractCard = ({ contract, formatCurrency }: ContractCardProps) =>
         </div>
       </CardContent>
       <CardFooter className="absolute bottom-2 right-2 p-0 border-none bg-transparent flex gap-2">
-
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-yellow-500 hover:bg-yellow-500/20"
-              disabled={contract.status !== 'active' || contract.months_paid >= 5 || mutation.isPending} // Disable if already pending or mutation is running
-            >
-              <AlertTriangle className="h-5 w-5" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Demande de Remboursement Anticipé</DialogTitle>
-              <DialogDescription>
-                Veuillez vérifier le calcul ci-dessous avant de soumettre votre demande.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="my-4 space-y-2 text-sm">
-              <div className="flex justify-between"><span>Montant investi :</span> <span className="font-medium">{formatCurrency(Number(contract.amount))}</span></div>
-              <div className="flex justify-between"><span>Profits déjà versés :</span> <span className="font-medium text-destructive">- {formatCurrency(totalProfitPaid)}</span></div>
-              <hr className="my-2 border-border" />
-              {contract.is_insured && (
-                <div className="bg-indigo-50 p-2 rounded-lg mb-2">
-                  <div className="flex items-center gap-2 text-indigo-700 font-medium">
-                    <Shield className="h-4 w-4" />
-                    Contrat assuré - Remboursement intégral garanti
+        {contract.is_insured && ( // Only render if contract is insured
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-yellow-500 hover:bg-yellow-500/20"
+                disabled={contract.status !== 'active' || contract.months_paid >= 5 || mutation.isPending || !contract.is_insured} // Disable if not active, too many months paid, mutation is running, or not insured
+              >
+                <AlertTriangle className="h-5 w-5" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Demande de Remboursement Anticipé</DialogTitle>
+                <DialogDescription>
+                  Veuillez vérifier le calcul ci-dessous avant de soumettre votre demande.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="my-4 space-y-2 text-sm">
+                <div className="flex justify-between"><span>Montant investi :</span> <span className="font-medium">{formatCurrency(Number(contract.amount))}</span></div>
+                <div className="flex justify-between"><span>Profits déjà versés :</span> <span className="font-medium text-destructive">- {formatCurrency(totalProfitPaid)}</span></div>
+                <hr className="my-2 border-border" />
+                {contract.is_insured && (
+                  <div className="bg-indigo-50 p-2 rounded-lg mb-2">
+                    <div className="flex items-center gap-2 text-indigo-700 font-medium">
+                      <Shield className="h-4 w-4" />
+                      Contrat assuré - Remboursement intégral garanti
+                    </div>
                   </div>
+                )}
+                <div className="flex justify-between text-base">
+                  <strong>Montant qui sera remboursé :</strong>
+                  <strong className="text-primary">
+                    {contract.is_insured ? formatCurrency(Number(contract.amount)) : formatCurrency(refundAmount)}
+                  </strong>
                 </div>
-              )}
-              <div className="flex justify-between text-base">
-                <strong>Montant qui sera remboursé :</strong>
-                <strong className="text-primary">
-                  {contract.is_insured ? formatCurrency(Number(contract.amount)) : formatCurrency(refundAmount)}
-                </strong>
               </div>
-            </div>
-            <DialogFooter className="flex flex-col items-center gap-4 pt-4">
-              <Button variant="secondary" onClick={() => setIsDialogOpen(false)} className="w-full sm:w-auto">Fermer</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter className="flex flex-col items-center gap-4 pt-4">
+                <Button variant="secondary" onClick={() => setIsDialogOpen(false)} className="w-full sm:w-auto">Fermer</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </CardFooter>
     </Card>
   );
