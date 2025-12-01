@@ -187,6 +187,7 @@ export const NewContractDialog = () => {
                           <p className="max-w-xs">
                             L'assurance garantit un remboursement intégral de votre investissement
                             en cas de demande anticipée, quelle que soit la durée écoulée.
+                            Veuillez consulter les termes et conditions pour plus de détails.
                           </p>
                         </TooltipContent>
                       </Tooltip>

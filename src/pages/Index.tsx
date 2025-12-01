@@ -54,9 +54,7 @@ const Index = () => {
               Nguma
             </h1>
             
-            <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Plateforme d'investissement automatisé avec profits mensuels garantis
-            </p>
+                        <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto">Profite de l’opportunité qu’offre le robot de trading Nguma.</p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
