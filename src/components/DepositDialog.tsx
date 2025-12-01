@@ -79,7 +79,7 @@ export const DepositDialog = () => {
     onSuccess: () => {
       toast({
         title: "✅ Demande de dépôt reçue",
-        description: "Votre dépôt est en attente de validation par un administrateur.",
+        description: "Votre demande est en attente. Veuillez consulter vos emails (et spams) pour la confirmation.",
       });
       queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
       queryClient.invalidateQueries({ queryKey: ['wallet'] });

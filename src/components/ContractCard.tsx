@@ -44,7 +44,7 @@ export const ContractCard = ({ contract, formatCurrency }: ContractCardProps) =>
     onSuccess: (data) => {
       toast({
         title: "Succès",
-        description: `Demande de remboursement pour le contrat #${contract.id.substring(0, 8)} soumise.`, // Changed message
+        description: `Demande de remboursement soumise. Veuillez consulter vos emails (et spams) pour la confirmation.`,
       });
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
       queryClient.invalidateQueries({ queryKey: ['wallets'] });

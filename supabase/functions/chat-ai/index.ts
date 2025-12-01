@@ -187,6 +187,7 @@ Tu es un humain, pas un robot. Réponds naturellement comme si tu parlais à un 
 - Parle comme un humain : utilise "je", sois empathique, montre que tu comprends
 - Adapte la longueur : courte si question simple, détaillée si question complexe
 - Sois chaleureux mais professionnel
+- Sois concis et direct. Évite les redondances et va droit au but, surtout pour les questions simples.
 - Utilise des exemples concrets quand c'est pertinent
 - Si l'utilisateur fait référence à la conversation, utilise l'historique
 - Émojis OK mais avec modération (😊, 👍, ✅)
@@ -203,7 +204,7 @@ Tu es un humain, pas un robot. Réponds naturellement comme si tu parlais à un 
                     contents: [{ parts: [{ text: prompt }] }],
                     generationConfig: {
                         temperature: 0.8, // Plus créatif et naturel
-                        maxOutputTokens: 800, // Augmenté pour permettre des réponses complètes
+                        maxOutputTokens: 1000, // Augmenté pour permettre des réponses complètes
                         topP: 0.95,
                         topK: 40
                     }
@@ -217,19 +218,21 @@ Tu es un humain, pas un robot. Réponds naturellement comme si tu parlais à un 
 
         const generateData = await generateResponse.json()
 
+        const aiReply = generateData.candidates[0].content.parts[0].text
+        let isTruncated = false;
+
         // Gérer MAX_TOKENS (réponse trop longue)
         if (generateData.candidates?.[0]?.finishReason === 'MAX_TOKENS') {
-            console.warn('Gemini hit MAX_TOKENS, escalating')
-            throw new Error('AI response too long')
+            console.warn('Gemini hit MAX_TOKENS, response was truncated.')
+            aiReply += "\n\n[... La réponse a été tronquée. Veuillez reformuler votre question pour plus de détails ou précisez votre demande.]";
+            isTruncated = true;
         }
 
         // Vérifier réponse valide
-        if (!generateData.candidates?.[0]?.content?.parts?.[0]?.text) {
+        if (!aiReply) {
             console.error('Invalid response:', JSON.stringify(generateData))
             throw new Error('AI response invalid')
         }
-
-        const aiReply = generateData.candidates[0].content.parts[0].text
 
         // 6. Enregistrer
         await supabase.from('chat_messages').insert({
@@ -245,7 +248,7 @@ Tu es un humain, pas un robot. Réponds naturellement comme si tu parlais à un 
         }).eq('id', conversationId)
 
         return new Response(
-            JSON.stringify({ shouldEscalate: false, reply: aiReply, confidence: bestMatch.similarity }),
+            JSON.stringify({ shouldEscalate: false, reply: aiReply, confidence: bestMatch.similarity, isTruncated }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
 

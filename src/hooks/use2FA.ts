@@ -94,7 +94,7 @@ export function use2FA() {
 
             toast({
                 title: '✅ 2FA activée !',
-                description: 'Votre compte est maintenant sécurisé avec la 2FA.',
+                description: 'Votre compte est sécurisé. Un email de confirmation a été envoyé (vérifiez vos spams).',
             });
 
             return true;
@@ -125,8 +125,8 @@ export function use2FA() {
             }
 
             toast({
-                title: 'Début activée',
-                description: 'La 2FA a été désactivée.',
+                title: '2FA désactivée',
+                description: 'La 2FA a été désactivée. Un email de confirmation a été envoyé (vérifiez vos spams).',
             });
 
             return true;

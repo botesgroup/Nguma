@@ -98,7 +98,7 @@ export const WithdrawDialog = ({ wallet }: WithdrawDialogProps) => {
     onSuccess: (data) => {
       setVerificationId(data.verification_id);
       setStep(2);
-      toast({ title: "Code envoyé", description: "Un code de vérification a été envoyé à votre email." });
+      toast({ title: "Code envoyé", description: "Un code de vérification a été envoyé à votre email (et vos spams)." });
     },
     onError: (error: Error) => {
       toast({ variant: "destructive", title: "Erreur", description: error.message });
@@ -112,19 +112,10 @@ export const WithdrawDialog = ({ wallet }: WithdrawDialogProps) => {
       const { verifyAndWithdraw } = await import("@/services/withdrawalMFAService");
       return verifyAndWithdraw(verificationId, otpCode);
     },
-    onSuccess: () => {
-      toast({ title: "Succès", description: "Votre demande de retrait a été soumise et est en attente d'approbation." });
-      queryClient.invalidateQueries({ queryKey: ['recentTransactions'] });
-      queryClient.invalidateQueries({ queryKey: ['wallets'] });
-      setOpen(false);
-      // Reset form
-      setAmount("");
-      setPaymentMethod("");
-      setPaymentDetails("");
-      setStep(1);
-      setVerificationId(null);
-      setOtpCode("");
-    },
+        onSuccess: () => {
+          toast({ title: "Succès", description: "Votre demande de retrait a été soumise. Pensez à vérifier vos spams pour l'email de confirmation." });
+          onClose();
+        },
     onError: (error: Error) => {
       toast({ variant: "destructive", title: "Erreur", description: error.message });
     },

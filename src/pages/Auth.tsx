@@ -98,7 +98,7 @@ const Auth = () => {
         // Email confirmation required
         toast({
           title: "Compte créé !",
-          description: "Veuillez vérifier votre email pour confirmer votre compte.",
+          description: "Veuillez vérifier votre email (et vos spams) pour confirmer votre compte.",
         });
       }
     } catch (error) {
@@ -305,10 +305,10 @@ const Auth = () => {
         redirectTo: `${window.location.origin}/update-password`,
       });
       if (error) throw error;
-      toast({
-        title: "Email envoyé",
-        description: "Veuillez vérifier votre boîte de réception.",
-      });
+          toast({
+            title: "Email envoyé",
+            description: "Veuillez vérifier votre boîte de réception (et vos spams) pour réinitialiser votre mot de passe.",
+          });
     } catch (error) {
       toast({
         variant: "destructive",

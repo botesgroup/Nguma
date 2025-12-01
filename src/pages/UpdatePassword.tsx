@@ -53,7 +53,7 @@ const UpdatePassword = () => {
 
       toast({
         title: "Mot de passe mis à jour !",
-        description: "Votre mot de passe a été modifié avec succès. Vous pouvez maintenant vous connecter.",
+        description: "Votre mot de passe a été modifié. Un email de confirmation a été envoyé (vérifiez vos spams).",
       });
       navigate("/auth"); // Redirect to login page
     } catch (error) {
