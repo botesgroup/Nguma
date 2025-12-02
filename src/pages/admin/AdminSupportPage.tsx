@@ -16,6 +16,7 @@ import {
     subscribeToConversations
 } from "@/services/chatService";
 import type { AdminConversation, ChatMessage } from "@/services/chatService";
+import { uploadChatFile } from "@/services/fileUploadService";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, MessageCircle, CheckCircle, XCircle } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
@@ -117,12 +118,30 @@ export default function AdminSupportPage() {
         };
     }, [selectedConversation, toast]);
 
-    const handleSendMessage = async (message: string) => {
-        if (!selectedConversation || !message.trim()) return;
+    const handleSendMessage = async (message: string, files?: File[]) => {
+        if (!selectedConversation || (!message.trim() && (!files || files.length === 0))) return;
 
         try {
             setSending(true);
-            await sendMessage(selectedConversation, message);
+
+            // Envoyer le message
+            const messageId = await sendMessage(selectedConversation, message);
+
+            // Upload des fichiers si présents
+            if (files && files.length > 0) {
+                for (const file of files) {
+                    try {
+                        await uploadChatFile(file, messageId);
+                    } catch (fileError) {
+                        console.error('File upload error:', fileError);
+                        toast({
+                            title: "Avertissement",
+                            description: `Impossible d'uploader ${file.name}`,
+                            variant: "destructive"
+                        });
+                    }
+                }
+            }
         } catch (error) {
             console.error('Error sending message:', error);
             toast({
@@ -213,8 +232,8 @@ export default function AdminSupportPage() {
                                             key={conv.id}
                                             onClick={() => setSelectedConversation(conv.id)}
                                             className={`w-full p-3 rounded-lg mb-2 text-left transition-colors ${selectedConversation === conv.id
-                                                    ? 'bg-primary/10 border-2 border-primary'
-                                                    : 'hover:bg-muted border-2 border-transparent'
+                                                ? 'bg-primary/10 border-2 border-primary'
+                                                : 'hover:bg-muted border-2 border-transparent'
                                                 }`}
                                         >
                                             <div className="flex items-center justify-between mb-1">

@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChatMessageList } from "@/components/ChatMessageList";
 import { ChatMessageInput } from "@/components/ChatMessageInput";
-import { getUserConversation, getMessages, sendMessage, markConversationAsRead, subscribeToMessages } from "@/services/chatService";
+import { getUserConversation, getMessages, sendMessage, markConversationAsRead, subscribeToMessages, updateConversationTitle } from "@/services/chatService";
 import type { ChatMessage } from "@/services/chatService";
+import { uploadChatFile } from "@/services/fileUploadService";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, MessageCircle } from "lucide-react";
 
@@ -12,6 +13,8 @@ export default function SupportPage() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
+    const [humanRequested, setHumanRequested] = useState(false);
+    const [isTyping, setIsTyping] = useState(false);
     const { toast } = useToast();
     const unsubscribeRef = useRef<(() => void) | null>(null);
 
@@ -58,13 +61,62 @@ export default function SupportPage() {
         };
     }, [toast]);
 
-    const handleSendMessage = async (message: string) => {
-        if (!conversationId || !message.trim()) return;
+    const handleSendMessage = async (message: string, files?: File[]) => {
+        if (!conversationId || (!message.trim() && (!files || files.length === 0))) return;
 
         try {
             setSending(true);
-            await sendMessage(conversationId, message);
-            // Le message sera ajouté via la souscription Realtime
+
+            // Détecter si l'utilisateur demande à parler à un humain
+            const humanKeywords = ['parler à un conseiller', 'conseiller humain', 'agent humain', 'parler à un humain'];
+            if (humanKeywords.some(keyword => message.toLowerCase().includes(keyword))) {
+                setHumanRequested(true);
+            }
+
+            // Vérifier si c'est le premier message de la conversation (pour générer le titre)
+            const isFirstMessage = messages.length === 0;
+
+            // Envoyer le message
+            const messageId = await sendMessage(conversationId, message);
+
+            // Upload des fichiers si présents
+            if (files && files.length > 0) {
+                for (const file of files) {
+                    try {
+                        await uploadChatFile(file, messageId);
+                    } catch (fileError) {
+                        console.error('File upload error:', fileError);
+                        toast({
+                            title: "Avertissement",
+                            description: `Impossible d'uploader ${file.name}`,
+                            variant: "destructive"
+                        });
+                    }
+                }
+            }
+
+            // Générer le titre automatiquement au premier message
+            if (isFirstMessage) {
+                setTimeout(async () => {
+                    await updateConversationTitle(conversationId);
+                }, 500);
+            }
+
+            // Appeler l'IA après un court délai si message texte présent
+            if (message.trim()) {
+                setIsTyping(true);
+                setTimeout(async () => {
+                    try {
+                        const { callChatAI } = await import('@/services/aiChatService');
+                        await callChatAI(conversationId, message);
+                    } catch (aiError) {
+                        console.error('AI response error:', aiError);
+                    } finally {
+                        setIsTyping(false);
+                    }
+                }, 500);
+            }
+
         } catch (error) {
             console.error('Error sending message:', error);
             toast({
@@ -107,10 +159,15 @@ export default function SupportPage() {
                         </div>
                     ) : (
                         <>
-                            <ChatMessageList messages={messages} />
+                            <ChatMessageList
+                                messages={messages}
+                                onSuggestionClick={handleSendMessage}
+                                isTyping={isTyping}
+                            />
                             <ChatMessageInput
                                 onSend={handleSendMessage}
                                 disabled={sending}
+                                aiOnlyMode={!humanRequested && !messages.some(msg => msg.is_admin)}
                             />
                         </>
                     )}

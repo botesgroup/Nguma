@@ -111,23 +111,34 @@ BEGIN
         );
     END IF;
 
-    -- 3. Get current settings
-    SELECT value::NUMERIC INTO current_monthly_rate
-    FROM public.settings
-    WHERE key = 'monthly_profit_rate';
+    -- 3. Get current settings safely
+    BEGIN
+        SELECT value::NUMERIC INTO current_monthly_rate
+        FROM public.settings
+        WHERE key = 'monthly_profit_rate';
+    EXCEPTION WHEN OTHERS THEN
+        -- Fallback to a default value if setting is invalid (e.g., non-numeric)
+        current_monthly_rate := 0.10; -- Safe default
+    END;
 
-    IF NOT FOUND THEN
+    -- Handle case where the setting might not exist at all
+    IF current_monthly_rate IS NULL THEN
         RETURN jsonb_build_object('success', false, 'error', 'Monthly profit rate not set');
     END IF;
 
-    -- Get contract duration
-    SELECT value::INTEGER INTO contract_duration_months
-    FROM public.settings
-    WHERE key = 'contract_duration_months';
+    -- Get contract duration safely
+    BEGIN
+        SELECT value::INTEGER INTO contract_duration_months
+        FROM public.settings
+        WHERE key = 'contract_duration_months';
+    EXCEPTION WHEN OTHERS THEN
+        contract_duration_months := 10; -- Safe default
+    END;
     
-    IF NOT FOUND THEN
-        contract_duration_months := 10; -- Default fallback
+    IF contract_duration_months IS NULL THEN
+        contract_duration_months := 10; -- Default fallback if key doesn't exist
     END IF;
+
 
     -- 4. Get user wallet and check balance (montant TOTAL demandé)
     SELECT * INTO user_wallet

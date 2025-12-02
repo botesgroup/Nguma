@@ -30,6 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { COUNTRIES, getCitiesByCountry, getCountryDialCode } from '@/lib/countries';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { uploadAvatar } from '@/services/avatarService';
+import { PasswordUpdateCard } from '@/components/PasswordUpdateCard';
 
 const profileSchema = z.object({
   email: z.string().email().optional(),
@@ -282,13 +283,13 @@ const ProfilePage = () => {
         <CardContent>
           {isLoading ? (
             <div className="space-y-4">
-               <div className="flex items-center space-x-6">
-                  <Skeleton className="h-24 w-24 rounded-full" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-8 w-32" />
-                    <Skeleton className="h-4 w-48" />
-                  </div>
+              <div className="flex items-center space-x-6">
+                <Skeleton className="h-24 w-24 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-8 w-32" />
+                  <Skeleton className="h-4 w-48" />
                 </div>
+              </div>
               {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
               <Skeleton className="h-10 w-32 mt-4" />
             </div>
@@ -471,6 +472,8 @@ const ProfilePage = () => {
           )}
         </CardContent>
       </Card>
+
+      <PasswordUpdateCard />
     </div>
   );
 };
