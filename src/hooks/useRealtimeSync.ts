@@ -113,7 +113,7 @@ export function useUserNotificationsRealtime(userId: string | undefined) {
 export function usePendingDepositsRealtime() {
     useRealtimeSync(
         'transactions',
-        `status=eq.pending&type=eq.deposit`,
+        undefined,
         ['pendingDeposits', 'adminStats'],
         true
     );
@@ -125,7 +125,7 @@ export function usePendingDepositsRealtime() {
 export function usePendingWithdrawalsRealtime() {
     useRealtimeSync(
         'transactions',
-        `status=eq.pending&type=eq.withdrawal`,
+        undefined,
         ['pendingWithdrawals', 'adminStats'],
         true
     );
@@ -137,7 +137,7 @@ export function usePendingWithdrawalsRealtime() {
 export function usePendingRefundsRealtime() {
     useRealtimeSync(
         'contracts',
-        `status=eq.refund_requested`,
+        undefined,
         ['pendingRefunds', 'adminStats'],
         true
     );

@@ -19,7 +19,7 @@ const investorItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Mes Contrats", url: "/contracts", icon: FileText },
   { title: "Transactions", url: "/transactions", icon: TrendingUp },
-  { title: "Support", url: "/support", icon: MessageCircle },
+
 ];
 
 const adminItems = [

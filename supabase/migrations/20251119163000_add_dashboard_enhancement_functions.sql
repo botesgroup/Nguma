@@ -143,25 +143,46 @@ RETURNS TABLE (
     months_remaining INT,
     status TEXT
 )
-LANGUAGE plpgsql
-SECURITY DEFINER
+LANGUAGE sql
+STABLE
 AS $$
-BEGIN
-    RETURN QUERY
+    WITH calculated_dates AS (
+      SELECT
+          c.id,
+          c.user_id,
+          c.amount,
+          c.start_date,
+          c.duration_months,
+          c.months_paid,
+          c.status,
+          -- Calcule la date anniversaire de paiement pour le mois en cours
+          (c.start_date + (
+              (EXTRACT(YEAR FROM age(now(), c.start_date)) * 12 + EXTRACT(MONTH FROM age(now(), c.start_date)))
+              || ' months'
+          )::INTERVAL)::DATE as anniversary_date
+      FROM
+          public.contracts c
+      WHERE
+          c.user_id = p_user_id
+          AND c.status = 'active'
+          AND c.months_paid < c.duration_months
+    )
     SELECT 
-        c.id as contract_id,
-        SUBSTRING(c.id::TEXT, 1, 8) as contract_number,
-        (c.start_date + (c.months_paid + 1 || ' months')::INTERVAL)::DATE as next_payment_date,
-        c.amount * 0.15 as estimated_amount, -- Assuming 15% monthly rate
-        c.duration_months - c.months_paid as months_remaining,
-        c.status
-    FROM public.contracts c
-    WHERE c.user_id = p_user_id
-    AND c.status = 'active'
-    AND c.months_paid < c.duration_months
+        cd.id as contract_id,
+        SUBSTRING(cd.id::TEXT, 1, 8) as contract_number,
+        -- Si la date anniversaire est passée, on prend celle du mois prochain, sinon on garde la date anniversaire
+        CASE
+            WHEN cd.anniversary_date <= now()::DATE THEN
+                (cd.anniversary_date + '1 month'::INTERVAL)::DATE
+            ELSE
+                cd.anniversary_date
+        END as next_payment_date,
+        cd.amount * 0.15 as estimated_amount, -- Assuming 15% monthly rate
+        cd.duration_months - cd.months_paid as months_remaining,
+        cd.status
+    FROM calculated_dates cd
     ORDER BY next_payment_date ASC
     LIMIT p_limit;
-END;
 $$;
 
 -- Function 4: Get profit history for a contract

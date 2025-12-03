@@ -68,9 +68,10 @@ export const requestRefund = async (contractId: string) => {
 /**
  * Creates a new investment contract using the user's profit balance.
  */
-export const reinvestProfit = async (amount: number) => {
+export const reinvestProfit = async (amount: number, isInsured: boolean = false) => {
   const { data, error } = await supabase.rpc('reinvest_from_profit', {
-    reinvestment_amount: amount
+    reinvestment_amount: amount,
+    p_is_insured: isInsured
   });
 
   if (error) {

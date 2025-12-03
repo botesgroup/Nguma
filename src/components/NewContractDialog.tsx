@@ -178,7 +178,7 @@ export const NewContractDialog = () => {
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2"
                   >
                     <Shield className="h-4 w-4 text-green-600" />
-                    Assurer ce contrat
+                    Assurance Capital
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -186,9 +186,8 @@ export const NewContractDialog = () => {
                         </TooltipTrigger>
                         <TooltipContent>
                           <p className="max-w-xs">
-                            L'assurance garantit un remboursement intégral de votre investissement
-                            en cas de demande anticipée. Veuillez consulter les termes et conditions
-                            pour plus de détails.
+                            L'Assurance Capital vous protège pendant les 5 premiers mois de votre investissement.
+                            Elle garantit le remboursement de votre capital moins les bénéfices générés.
                           </p>
                         </TooltipContent>
                       </Tooltip>
@@ -227,7 +226,7 @@ export const NewContractDialog = () => {
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-4xl h-[90vh] p-2">
-                  <iframe 
+                  <iframe
                     src={`${contractPdfUrl}#toolbar=0`}
                     className="w-full h-full rounded-md"
                     title="Explication du Contrat PDF"

@@ -99,39 +99,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Quick Stats Row */}
-      {!isLoadingWallet && !isLoadingContracts && activeContracts.length > 0 && (
-        <div className="flex flex-wrap gap-3 sm:gap-4">
-          <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-            <span className="text-xs sm:text-sm text-muted-foreground">ROI Moyen:</span>
-            <span className="text-sm sm:text-base font-bold text-blue-700">+{roi.toFixed(1)}%</span>
-          </div>
-          {latestProfit > 0 && (
-            <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-              <span className="text-xs sm:text-sm text-muted-foreground">Dernier Profit:</span>
-              <span className="text-sm sm:text-base font-bold text-green-700">{formatCurrency(latestProfit)}</span>
-            </div>
-          )}
-          {nextPaymentDays !== null && nextPaymentDays >= 0 && (
-            <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
-              <span className="text-xs sm:text-sm text-muted-foreground">Prochain Paiement:</span>
-              <span className="text-sm sm:text-base font-bold text-purple-700">{nextPaymentDays === 0 ? "Aujourd'hui" : `Dans ${nextPaymentDays}j`}</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Encouragement Message - Dynamic based on performance */}
-      {!isLoadingWallet && roi > 20 && (
-        <Alert className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-          <TrendingUp className="h-4 w-4 text-green-600" />
-          <AlertTitle className="text-green-900">Excellente performance ! 🎉</AlertTitle>
-          <AlertDescription className="text-green-800">
-            Votre ROI de {roi.toFixed(1)}% dépasse l'objectif de 20%. Continuez comme ça !
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/* Wallet Cards with Loading State */}
       {isLoadingWallet || isLoadingContracts ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -143,17 +110,7 @@ const Dashboard = () => {
         <WalletCard wallet={wallet} contracts={contracts} />
       )}
 
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-        {/* Profit Chart with Loading */}
-        {isLoadingProfits ? (
-          <Skeleton className="h-[350px] sm:h-[400px] rounded-lg" />
-        ) : (
-          <ProfitChart profits={profits} />
-        )}
 
-        {/* Upcoming Payments */}
-        <UpcomingPayments />
-      </div>
 
       {/* Contracts Section with Enhanced Empty State */}
       <div>
@@ -186,12 +143,7 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Transactions with Loading */}
-      {isLoadingTransactions ? (
-        <Skeleton className="h-[300px] rounded-lg" />
-      ) : (
-        <TransactionTable recentTransactions={recentTransactions} formatCurrency={formatCurrency} />
-      )}
+
     </div>
   );
 };
