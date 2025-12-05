@@ -28,7 +28,7 @@ export const WalletCard = ({ wallet, contracts }: WalletCardProps) => {
       style: "currency",
       currency: wallet?.currency || "USD",
       minimumFractionDigits: 2,
-      maximumFractionDigits: 8,
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 
