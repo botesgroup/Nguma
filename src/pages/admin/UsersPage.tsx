@@ -36,13 +36,13 @@ const UsersPage = () => {
 
       {/* Stats Cards */}
       {(isLoadingStats || isLoadingGrowth) ? (
-        <div className="grid gap-4 md:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
+        <div className="grid gap-4 md:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
             <Skeleton key={i} className="h-[100px] rounded-lg" />
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
           <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/20">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-2">
@@ -84,6 +84,21 @@ const UsersPage = () => {
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Avec contrats en cours
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/20">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm text-muted-foreground">Taux de Conversion</div>
+                <UserCheck className="h-4 w-4 text-amber-600" />
+              </div>
+              <div className="text-2xl font-bold text-amber-700">
+                {totalInvestors > 0 ? ((activeInvestors / totalInvestors) * 100).toFixed(1) : 0}%
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Utilisateurs ayant investi
               </p>
             </CardContent>
           </Card>

@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useDebounce } from "@/hooks/useDebounce";
-import { MoreHorizontal, FileDown, AlertTriangle, CheckCircle, Edit, Filter, X, Calendar } from "lucide-react";
+import { COUNTRIES, getCitiesByCountry, getCountryName, getCountryFlag } from "@/lib/countries";
+import { MoreHorizontal, FileDown, AlertTriangle, CheckCircle, Edit, Filter, X, Calendar, Phone, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { UserDetailDialog } from "@/components/admin/UserDetailDialog";
@@ -64,6 +65,19 @@ const StatusCell = ({ contracts }: { contracts: Contract[] | null }) => {
   return <Badge className={variant}>{status}</Badge>;
 };
 
+// Check if user is new (registered < 7 days ago)
+const isNewUser = (createdAt?: string): boolean => {
+  if (!createdAt) return false;
+  const daysDiff = (Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24);
+  return daysDiff <= 7;
+};
+
+// Count active contracts
+const countActiveContracts = (contracts: Contract[] | null): number => {
+  if (!contracts) return 0;
+  return contracts.filter(c => c.status === 'active').length;
+};
+
 const PAGE_SIZE = 10;
 
 export const InvestorListTable = () => {
@@ -83,6 +97,8 @@ export const InvestorListTable = () => {
   const [dateTo, setDateTo] = useState("");
   const [minInvested, setMinInvested] = useState("");
   const [maxInvested, setMaxInvested] = useState("");
+  const [country, setCountry] = useState("");
+  const [city, setCity] = useState("");
 
   // Build filters object
   const filters: InvestorFilters = {
@@ -93,12 +109,14 @@ export const InvestorListTable = () => {
     dateTo: dateTo || undefined,
     minInvested: minInvested ? parseFloat(minInvested) : undefined,
     maxInvested: maxInvested ? parseFloat(maxInvested) : undefined,
+    country: country || undefined,
+    city: city || undefined,
   };
 
-  const hasAdvancedFilters = dateFrom || dateTo || minInvested || maxInvested;
+  const hasAdvancedFilters = dateFrom || dateTo || minInvested || maxInvested || country || city;
 
   const { data, isLoading } = useQuery<{ data: Investor[], count: number }>({
-    queryKey: ["investorsList", debouncedSearchQuery, page, dateFrom, dateTo, minInvested, maxInvested],
+    queryKey: ["investorsList", debouncedSearchQuery, page, dateFrom, dateTo, minInvested, maxInvested, country, city],
     queryFn: () => getInvestorsList(filters),
   });
 
@@ -125,7 +143,42 @@ export const InvestorListTable = () => {
     setDateTo("");
     setMinInvested("");
     setMaxInvested("");
+    setCountry("");
+    setCity("");
     setPage(1);
+  };
+
+  // Export to CSV function
+  const exportToCSV = () => {
+    setIsExporting(true);
+    try {
+      const headers = ["Nom", "Email", "Téléphone", "Balance", "Investi", "Profits", "Contrats Actifs", "Statut", "Date Inscription"];
+      const rows = filteredInvestors.map(inv => [
+        `${inv.first_name || ''} ${inv.last_name || ''}`.trim() || "N/A",
+        inv.email,
+        inv.phone || "N/A",
+        inv.wallet?.total_balance || 0,
+        inv.wallet?.invested_balance || 0,
+        inv.wallet?.profit_balance || 0,
+        countActiveContracts(inv.contracts),
+        getInvestorStatus(inv.contracts),
+        inv.created_at ? new Date(inv.created_at).toLocaleDateString('fr-FR') : "N/A"
+      ]);
+
+      const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `investisseurs_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Export réussi", description: `${filteredInvestors.length} investisseurs exportés.` });
+    } catch {
+      toast({ variant: "destructive", title: "Erreur", description: "Échec de l'export." });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const filteredInvestors = investors.filter(investor => {
@@ -141,6 +194,15 @@ export const InvestorListTable = () => {
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-bold">Investisseurs ({totalCount})</h3>
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportToCSV}
+                disabled={isExporting || filteredInvestors.length === 0}
+              >
+                <FileDown className="h-4 w-4 mr-2" />
+                {isExporting ? "Export..." : "Exporter CSV"}
+              </Button>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="Statut" />
@@ -228,6 +290,46 @@ export const InvestorListTable = () => {
                     </div>
                   </div>
 
+                  <div className="space-y-2">
+                    <Label className="text-sm text-muted-foreground">📍 Localisation</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs">Pays</Label>
+                        <Select value={country} onValueChange={(value) => { setCountry(value); setCity(""); setPage(1); }}>
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Pays" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[200px]">
+                            {COUNTRIES.map((c) => (
+                              <SelectItem key={c.code} value={c.code}>
+                                {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Ville</Label>
+                        <Select
+                          value={city}
+                          onValueChange={(value) => { setCity(value); setPage(1); }}
+                          disabled={!country}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Ville" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[200px]">
+                            {country && getCitiesByCountry(country).map((c) => (
+                              <SelectItem key={c} value={c}>
+                                {c}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
                   <Button className="w-full" onClick={() => setShowAdvancedFilters(false)}>
                     Appliquer les filtres
                   </Button>
@@ -263,6 +365,18 @@ export const InvestorListTable = () => {
                   <X className="h-3 w-3 cursor-pointer" onClick={() => setMaxInvested("")} />
                 </Badge>
               )}
+              {country && (
+                <Badge variant="secondary" className="gap-1">
+                  <span className="text-lg">{getCountryFlag(country)}</span> {getCountryName(country)}
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => setCountry("")} />
+                </Badge>
+              )}
+              {city && (
+                <Badge variant="secondary" className="gap-1">
+                  📍 {city}
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => setCity("")} />
+                </Badge>
+              )}
             </div>
           )}
         </div>
@@ -272,8 +386,9 @@ export const InvestorListTable = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Nom</TableHead>
+                <TableHead>Téléphone</TableHead>
                 <TableHead>Balance</TableHead>
-                <TableHead>PNL %</TableHead>
+                <TableHead>Contrats</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -297,17 +412,35 @@ export const InvestorListTable = () => {
               ) : filteredInvestors.length > 0 ? (
                 filteredInvestors.map((investor) => {
                   const isBanned = investor.banned_until && new Date(investor.banned_until) > new Date();
+                  const activeContractsCount = countActiveContracts(investor.contracts);
                   return (
                     <TableRow key={investor.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{`${investor.first_name || ''} ${investor.last_name || ''}`.trim() || "N/A"}</span>
                           {isBanned && <Badge variant="destructive">Banni</Badge>}
+                          {isNewUser(investor.created_at) && <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white"><Sparkles className="h-3 w-3 mr-1" />Nouveau</Badge>}
                         </div>
                         <div className="text-sm text-muted-foreground">{investor.email}</div>
                       </TableCell>
+                      <TableCell>
+                        {investor.phone ? (
+                          <div className="flex items-center gap-1 text-sm">
+                            <Phone className="h-3 w-3 text-muted-foreground" />
+                            {investor.phone}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
                       <TableCell>{investor.wallet ? formatCurrency(Number(investor.wallet.total_balance), investor.wallet.currency) : 'N/A'}</TableCell>
-                      <TableCell><PnlCell wallet={investor.wallet} /></TableCell>
+                      <TableCell>
+                        {activeContractsCount > 0 ? (
+                          <Badge variant="outline" className="bg-primary/10">{activeContractsCount} actif{activeContractsCount > 1 ? 's' : ''}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">0</span>
+                        )}
+                      </TableCell>
                       <TableCell><StatusCell contracts={investor.contracts} /></TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -332,7 +465,7 @@ export const InvestorListTable = () => {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="p-0">
+                  <TableCell colSpan={6} className="p-0">
                     <div className="text-center py-16 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg m-4 border border-blue-100">
                       <div className="text-6xl mb-4">👥</div>
                       <h3 className="text-2xl font-semibold mb-2 text-blue-900">

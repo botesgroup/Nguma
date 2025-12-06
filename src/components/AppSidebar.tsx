@@ -26,11 +26,13 @@ const adminItems = [
   { title: "Admin Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Dépôts en attente", url: "/admin/deposits", icon: FileText },
   { title: "Retraits en attente", url: "/admin/withdrawals", icon: FileText },
+  { title: "Historique Transactions", url: "/admin/transactions", icon: TrendingUp },
   { title: "Remboursements en attente", url: "/admin/refunds", icon: FileText },
   { title: "Gestion Contrats", url: "/admin/contracts", icon: FileText },
   { title: "Utilisateurs", url: "/admin/users", icon: Users },
   { title: "Support Chat", url: "/admin/support", icon: MessageCircle },
   { title: "Base de Connaissances", url: "/admin/knowledge", icon: BookOpen },
+  { title: "Comptabilité", url: "/admin/accounting", icon: Wallet },
   { title: "Paramètres", url: "/admin/settings", icon: Settings },
 ];
 

@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay, startOfWeek, startOfMonth } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -31,14 +31,18 @@ const AdminContractsPage = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [datePreset, setDatePreset] = useState("all");
+
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false); // State for edit dialog
   const [selectedContract, setSelectedContract] = useState<ContractData | null>(null); // State for selected contract
 
   const { data: paginatedData, isLoading } = useQuery({
-    queryKey: ["allContracts", debouncedSearchQuery, statusFilter, page],
-    queryFn: () => adminGetAllContracts(debouncedSearchQuery, statusFilter, page, PAGE_SIZE),
+    queryKey: ["allContracts", debouncedSearchQuery, statusFilter, page, dateFrom, dateTo],
+    queryFn: () => adminGetAllContracts(debouncedSearchQuery, statusFilter, page, PAGE_SIZE, dateFrom, dateTo),
     placeholderData: { data: [], count: 0 },
   });
 
@@ -65,6 +69,35 @@ const AdminContractsPage = () => {
   const handleEditClick = (contract: ContractData) => {
     setSelectedContract(contract);
     setIsEditDialogOpen(true);
+  };
+
+  const handlePresetChange = (value: string) => {
+    setDatePreset(value);
+    const today = new Date();
+
+    switch (value) {
+      case "today":
+        setDateFrom(format(startOfDay(today), "yyyy-MM-dd"));
+        setDateTo(format(endOfDay(today), "yyyy-MM-dd"));
+        break;
+      case "week":
+        setDateFrom(format(startOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd"));
+        setDateTo(format(endOfDay(today), "yyyy-MM-dd"));
+        break;
+      case "month":
+        setDateFrom(format(startOfMonth(today), "yyyy-MM-dd"));
+        setDateTo(format(endOfDay(today), "yyyy-MM-dd"));
+        break;
+      case "custom":
+        setDateFrom("");
+        setDateTo("");
+        break;
+      case "all":
+        setDateFrom("");
+        setDateTo("");
+        break;
+    }
+    setPage(1);
   };
 
   return (
@@ -152,26 +185,61 @@ const AdminContractsPage = () => {
       )}
 
       {/* Filter Controls */}
-      <div className="flex items-center gap-4">
-        <Input
-          placeholder="Rechercher par nom, email, ID contrat..."
-          className="max-w-sm"
-          value={searchQuery}
-          onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
-        />
-        <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setPage(1); }}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filtrer par statut" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les statuts</SelectItem>
-            <SelectItem value="active">Actif</SelectItem>
-            <SelectItem value="completed">Terminé</SelectItem>
-            <SelectItem value="refunded">Remboursé</SelectItem>
-            <SelectItem value="pending_refund">Demande Remboursement</SelectItem> {/* Added pending_refund */}
-            <SelectItem value="cancelled">Annulé</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+        <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+          <Input
+            placeholder="Rechercher par nom, email, ID contrat..."
+            className="max-w-sm w-full md:w-[300px]"
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+          />
+          <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); setPage(1); }}>
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="Filtrer par statut" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les statuts</SelectItem>
+              <SelectItem value="active">Actif</SelectItem>
+              <SelectItem value="completed">Terminé</SelectItem>
+              <SelectItem value="refunded">Remboursé</SelectItem>
+              <SelectItem value="pending_refund">Demande Remboursement</SelectItem>
+              <SelectItem value="cancelled">Annulé</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-4 items-center w-full md:w-auto">
+          <Select value={datePreset} onValueChange={handlePresetChange}>
+            <SelectTrigger className="w-full md:w-[180px]">
+              <SelectValue placeholder="Période" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tout l'historique</SelectItem>
+              <SelectItem value="today">Aujourd'hui</SelectItem>
+              <SelectItem value="week">Cette semaine</SelectItem>
+              <SelectItem value="month">Ce mois</SelectItem>
+              <SelectItem value="custom">Personnalisé</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {datePreset === 'custom' && (
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+                className="w-full md:w-[150px]"
+              />
+              <span className="text-muted-foreground">-</span>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+                className="w-full md:w-[150px]"
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Contracts Table */}

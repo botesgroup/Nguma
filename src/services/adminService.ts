@@ -123,10 +123,12 @@ export interface InvestorFilters {
   dateTo?: string;
   minInvested?: number;
   maxInvested?: number;
+  country?: string;
+  city?: string;
 }
 
 export const getInvestorsList = async (filters: InvestorFilters = {}) => {
-  const { searchQuery, page = 1, pageSize = 10, dateFrom, dateTo, minInvested, maxInvested } = filters;
+  const { searchQuery, page = 1, pageSize = 10, dateFrom, dateTo, minInvested, maxInvested, country, city } = filters;
 
   const { data, error } = await supabase.rpc('get_investor_list_details', {
     p_search_query: searchQuery || null,
@@ -136,6 +138,8 @@ export const getInvestorsList = async (filters: InvestorFilters = {}) => {
     p_date_to: dateTo || null,
     p_min_invested: minInvested || null,
     p_max_invested: maxInvested || null,
+    p_country: country || null,
+    p_city: city || null,
   });
 
   if (error) {
@@ -144,7 +148,7 @@ export const getInvestorsList = async (filters: InvestorFilters = {}) => {
   }
 
   // The RPC returns a single JSON object with 'data' and 'count' keys.
-  return data;
+  return data as any;
 };
 
 // --- Admin Actions ---
@@ -267,13 +271,17 @@ export const adminGetAllContracts = async (
   searchQuery: string = '',
   statusFilter: string = 'all',
   page: number = 1,
-  pageSize: number = 10
+  pageSize: number = 10,
+  dateFrom?: string,
+  dateTo?: string
 ) => {
-  const { data, error } = await supabase.rpc('admin_get_all_contracts', {
-    p_search_query: searchQuery,
-    p_status_filter: statusFilter,
-    p_page_num: page,
-    p_page_size: pageSize,
+  const { data, error } = await supabase.rpc('admin_list_contracts', {
+    p_search_query: searchQuery || '',
+    p_status_filter: statusFilter || 'all',
+    p_page_num: Number(page) || 1,
+    p_page_size: Number(pageSize) || 10,
+    p_date_from: dateFrom || null,
+    p_date_to: dateTo || null,
   });
 
   // The RPC returns a single JSON object with 'data' and 'count' keys.
@@ -316,4 +324,28 @@ export const adminUpdateContract = async (contractId: string, updates: Record<st
   const result = data as { success: boolean; error?: string };
   if (result && !result.success) throw new Error(result.error || "An unknown error occurred.");
   return result;
+};
+
+// --- Transaction History ---
+export const getAdminTransactionHistory = async (
+  searchQuery: string = '',
+  typeFilter: string = 'all',
+  statusFilter: string = 'all',
+  page: number = 1,
+  pageSize: number = 10,
+  dateFrom?: string,
+  dateTo?: string
+) => {
+  const { data, error } = await supabase.rpc('get_admin_transaction_history', {
+    p_search_query: searchQuery || null,
+    p_type_filter: typeFilter,
+    p_status_filter: statusFilter,
+    p_page_num: page,
+    p_page_size: pageSize,
+    p_date_from: dateFrom || null,
+    p_date_to: dateTo || null,
+  });
+
+  if (error) throw new Error(error.message);
+  return data as { data: any[], count: number };
 };

@@ -33,6 +33,10 @@ import LoginAuditPage from "./pages/admin/LoginAuditPage";
 import SupportPage from "./pages/SupportPage";
 import AdminSupportPage from "./pages/admin/AdminSupportPage";
 import AdminKnowledgePage from "./pages/admin/AdminKnowledgePage";
+import AdminTransactionsPage from "./pages/admin/AdminTransactionsPage";
+import AccountingPage from "./pages/admin/accounting/AccountingPage";
+import PaymentSchedulerPage from "./pages/admin/accounting/PaymentSchedulerPage";
+import LedgerPage from "./pages/admin/accounting/LedgerPage";
 import { ChatButton } from "./components/ChatButton";
 
 import Terms from "./pages/Terms";
@@ -213,6 +217,46 @@ const App = () => (
                 <AdminRoute>
                   <AppLayout>
                     <AdminKnowledgePage />
+                  </AppLayout>
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/transactions"
+              element={
+                <AdminRoute>
+                  <AppLayout>
+                    <AdminTransactionsPage />
+                  </AppLayout>
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/accounting"
+              element={
+                <AdminRoute>
+                  <AppLayout>
+                    <AccountingPage />
+                  </AppLayout>
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/accounting/scheduler"
+              element={
+                <AdminRoute>
+                  <AppLayout>
+                    <PaymentSchedulerPage />
+                  </AppLayout>
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/accounting/ledger"
+              element={
+                <AdminRoute>
+                  <AppLayout>
+                    <LedgerPage />
                   </AppLayout>
                 </AdminRoute>
               }
