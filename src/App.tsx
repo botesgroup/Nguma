@@ -25,7 +25,7 @@ const UsersPage = lazy(() => import("./pages/admin/UsersPage"));
 const SettingsPage = lazy(() => import("./pages/admin/SettingsPage"));
 const PendingDepositsPage = lazy(() => import("./pages/admin/PendingDepositsPage"));
 const PendingWithdrawalsPage = lazy(() => import("./pages/admin/PendingWithdrawalsPage"));
-const PendingRefundsPage = lazy(() => import("./pages/admin/PendingRefundsPage"));
+
 const AdminContractsPage = lazy(() => import("./pages/admin/Contracts"));
 const AdminUserContractsPage = lazy(() => import("./pages/admin/AdminUserContractsPage"));
 const ProfilePage = lazy(() => import("./pages/Profile"));
