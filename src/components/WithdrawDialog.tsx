@@ -231,9 +231,9 @@ export const WithdrawDialog = ({ wallet }: WithdrawDialogProps) => {
             <div className="space-y-2">
               <label htmlFor="amount" className="text-sm font-medium">
                 Montant à retirer (USD)
-                {selectedMethod.min_amount && (
+                {minWithdrawal > 0 && (
                   <span className="text-muted-foreground ml-2">
-                    (Min: {selectedMethod.min_amount} USD)
+                    (Min: {minWithdrawal} USD)
                   </span>
                 )}
               </label>
