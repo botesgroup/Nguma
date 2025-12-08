@@ -123,8 +123,8 @@ export interface InvestorFilters {
   dateTo?: string;
   minInvested?: number;
   maxInvested?: number;
-  country?: string;
-  city?: string;
+  country?: string; // Gardé pour la compatibilité de type, mais non utilisé dans l'appel
+  city?: string;    // Gardé pour la compatibilité de type, mais non utilisé dans l'appel
 }
 
 export const getInvestorsList = async (filters: InvestorFilters = {}) => {
@@ -139,7 +139,7 @@ export const getInvestorsList = async (filters: InvestorFilters = {}) => {
     p_min_invested: minInvested || null,
     p_max_invested: maxInvested || null,
     p_country: country || null,
-    p_city: city || null,
+    p_city: city || null
   });
 
   if (error) {
@@ -283,6 +283,11 @@ export const adminGetAllContracts = async (
     p_date_from: dateFrom || null,
     p_date_to: dateTo || null,
   });
+
+  if (error) {
+    console.error("Error fetching contracts:", error);
+    throw new Error("Could not fetch contracts list.");
+  }
 
   // The RPC returns a single JSON object with 'data' and 'count' keys.
   return data;
