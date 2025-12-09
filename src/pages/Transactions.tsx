@@ -15,6 +15,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ArrowDownCircle, ArrowUpCircle, Wallet } from "lucide-react";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Pagination,
   PaginationContent,
   PaginationItem,
@@ -37,6 +43,9 @@ const TransactionsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10); // Default page size
+
+  const [proofModalOpen, setProofModalOpen] = useState(false);
+  const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
 
   const { data: wallet } = useQuery({ queryKey: ["wallet"], queryFn: getWallet });
 
@@ -187,6 +196,7 @@ const TransactionsPage = () => {
             <SelectItem value="deposit">Dépôt</SelectItem>
             <SelectItem value="withdrawal">Retrait</SelectItem>
             <SelectItem value="investment">Investissement</SelectItem>
+            <SelectItem value="assurance">Assurance</SelectItem>
             <SelectItem value="profit">Profit</SelectItem>
             <SelectItem value="refund">Remboursement</SelectItem>
             <SelectItem value="admin_credit">Crédit Admin</SelectItem>
@@ -204,6 +214,7 @@ const TransactionsPage = () => {
               <TableHead>Type</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>Statut</TableHead>
+              <TableHead>Preuve</TableHead>
               <TableHead className="text-right">Montant</TableHead>
             </TableRow>
           </TableHeader>
@@ -215,6 +226,7 @@ const TransactionsPage = () => {
                   <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                   <TableCell className="text-right"><Skeleton className="h-5 w-28 ml-auto" /></TableCell>
                 </TableRow>
               ))
@@ -225,6 +237,19 @@ const TransactionsPage = () => {
                   <TableCell className="capitalize">{tx.type}</TableCell>
                   <TableCell>{tx.description}</TableCell>
                   <TableCell><Badge variant={getStatusVariant(tx.status)} className="capitalize">{tx.status}</Badge></TableCell>
+                  <TableCell>
+                    {tx.type === 'deposit' && tx.proof_url ? (
+                      <div className="flex flex-col gap-1">
+                        <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => { setSelectedProofUrl(tx.proof_url); setProofModalOpen(true); }}>
+                          Voir la preuve
+                        </Button>
+                        {/* Ligne de débogage pour afficher l'URL */}
+                        <p className="text-xs text-muted-foreground break-all max-w-[150px] truncate">{tx.proof_url}</p>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
                   <TableCell className={`text-right font-medium ${tx.type === 'deposit' || tx.type === 'profit' ? 'text-profit' : tx.type === 'withdrawal' ? 'text-loss' : ''
                     }`}>
                     {tx.type === 'withdrawal' || tx.type === 'investment' ? "-" : "+"}
@@ -234,7 +259,7 @@ const TransactionsPage = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="text-center h-24">Aucune transaction trouvée.</TableCell>
+                <TableCell colSpan={6} className="text-center h-24">Aucune transaction trouvée.</TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -262,6 +287,41 @@ const TransactionsPage = () => {
           </PaginationContent>
         </Pagination>
       )}
+
+      <Dialog open={proofModalOpen} onOpenChange={setProofModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Preuve de Paiement</DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-center items-center p-4 min-h-[70vh]">
+            {selectedProofUrl &&
+              (() => {
+                try {
+                  const isPdf = new URL(selectedProofUrl).pathname.toLowerCase().endsWith('.pdf');
+                  if (isPdf) {
+                    return (
+                      <iframe
+                        src={selectedProofUrl}
+                        className="w-full h-[70vh] border-0"
+                        title="Preuve de paiement PDF"
+                      />
+                    );
+                  }
+                } catch (e) {
+                  console.error("Invalid proof URL", e);
+                }
+                // Fallback to image for non-PDFs or invalid URLs
+                return (
+                  <img
+                    src={selectedProofUrl}
+                    alt="Preuve de paiement"
+                    className="max-w-full h-auto rounded-md shadow-sm object-contain"
+                  />
+                );
+              })()}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -206,7 +206,7 @@ export const PendingDeposits = () => {
                       <TableCell>
                         {deposit.proof_url ? (
                           <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => { setSelectedProofUrl(deposit.proof_url); setProofModalOpen(true); }}>
-                            Voir l'image
+                            Voir la preuve
                           </Button>
                         ) : (
                           <span className="text-xs text-muted-foreground">Aucune</span>
@@ -294,14 +294,32 @@ export const PendingDeposits = () => {
           <DialogHeader>
             <DialogTitle>Preuve de Paiement</DialogTitle>
           </DialogHeader>
-          <div className="flex justify-center items-center p-4">
-            {selectedProofUrl && (
-              <img
-                src={selectedProofUrl}
-                alt="Preuve de paiement"
-                className="max-w-full h-auto rounded-md shadow-sm object-contain"
-              />
-            )}
+          <div className="flex justify-center items-center p-4 min-h-[70vh]">
+            {selectedProofUrl &&
+              (() => {
+                try {
+                  const isPdf = new URL(selectedProofUrl).pathname.toLowerCase().endsWith('.pdf');
+                  if (isPdf) {
+                    return (
+                      <iframe
+                        src={selectedProofUrl}
+                        className="w-full h-[70vh] border-0"
+                        title="Preuve de paiement PDF"
+                      />
+                    );
+                  }
+                } catch (e) {
+                  console.error("Invalid proof URL", e);
+                }
+                // Fallback to image for non-PDFs or invalid URLs
+                return (
+                  <img
+                    src={selectedProofUrl}
+                    alt="Preuve de paiement"
+                    className="max-w-full h-auto rounded-md shadow-sm object-contain"
+                  />
+                );
+              })()}
           </div>
         </DialogContent>
       </Dialog>

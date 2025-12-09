@@ -143,7 +143,7 @@ export const DynamicPaymentForm = ({ method, amount, onSubmit, isSubmitting = fa
                 <Input
                     id="proof"
                     type="file"
-                    accept="image/*"
+                    accept="image/*,application/pdf"
                     onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) handleFileUpload(file);
