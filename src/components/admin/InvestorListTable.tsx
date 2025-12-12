@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getInvestorsList, activateUser, deactivateUser, InvestorFilters } from "@/services/adminService";
+import { getInvestorsList, exportInvestorsList, activateUser, deactivateUser, InvestorFilters } from "@/services/adminService";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -140,12 +139,13 @@ export const InvestorListTable = () => {
     maxInvested: maxInvested ? parseFloat(maxInvested) : undefined,
     country: country || undefined,
     city: city || undefined,
+    status: statusFilter === 'all' ? undefined : statusFilter,
   };
 
   const hasAdvancedFilters = dateFrom || dateTo || minInvested || maxInvested || country || city;
 
   const { data, isLoading } = useQuery<{ data: Investor[], count: number }>({
-    queryKey: ["investorsList", debouncedSearchQuery, page, dateFrom, dateTo, minInvested, maxInvested, country, city],
+    queryKey: ["investorsList", debouncedSearchQuery, page, statusFilter, dateFrom, dateTo, minInvested, maxInvested, country, city],
     queryFn: () => getInvestorsList(filters),
   });
 
@@ -178,19 +178,21 @@ export const InvestorListTable = () => {
   };
 
   // Export to CSV function
-  const exportToCSV = () => {
+  const exportToCSV = async () => {
     setIsExporting(true);
     try {
-      const headers = ["Nom", "Email", "Téléphone", "Balance", "Investi", "Profits", "Contrats Actifs", "Statut", "Date Inscription"];
-      const rows = filteredInvestors.map(inv => [
+      // Fetch all filtered data for export
+      const allInvestors = await exportInvestorsList(filters);
+
+      const headers = ["Nom", "Email", "Téléphone", "Balance", "Investi", "Profits", "Statut", "Date Inscription"];
+      const rows = allInvestors.map(inv => [
         `${inv.first_name || ''} ${inv.last_name || ''}`.trim() || "N/A",
         inv.email,
         inv.phone || "N/A",
-        inv.wallet?.total_balance || 0,
-        inv.wallet?.invested_balance || 0,
-        inv.wallet?.profit_balance || 0,
-        countActiveContracts(inv.contracts),
-        getInvestorStatus(inv.contracts),
+        inv.total_balance || 0,
+        inv.invested_balance || 0,
+        inv.profit_balance || 0,
+        inv.status,
         inv.created_at ? new Date(inv.created_at).toLocaleDateString('fr-FR') : "N/A"
       ]);
 
@@ -202,18 +204,14 @@ export const InvestorListTable = () => {
       link.download = `investisseurs_${new Date().toISOString().split('T')[0]}.csv`;
       link.click();
       URL.revokeObjectURL(url);
-      toast({ title: "Export réussi", description: `${filteredInvestors.length} investisseurs exportés.` });
-    } catch {
+      toast({ title: "Export réussi", description: `${allInvestors.length} investisseurs exportés.` });
+    } catch (error) {
+      console.error("CSV Export failed:", error);
       toast({ variant: "destructive", title: "Erreur", description: "Échec de l'export." });
     } finally {
       setIsExporting(false);
     }
   };
-
-  const filteredInvestors = investors.filter(investor => {
-    if (statusFilter === 'all') return true;
-    return getInvestorStatus(investor.contracts) === statusFilter;
-  });
 
   return (
     <>
@@ -227,12 +225,18 @@ export const InvestorListTable = () => {
                 variant="outline"
                 size="sm"
                 onClick={exportToCSV}
-                disabled={isExporting || filteredInvestors.length === 0}
+                disabled={isExporting || investors.length === 0}
               >
                 <FileDown className="h-4 w-4 mr-2" />
                 {isExporting ? "Export..." : "Exporter CSV"}
               </Button>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select 
+                value={statusFilter} 
+                onValueChange={(value) => {
+                  setStatusFilter(value);
+                  setPage(1);
+                }}
+              >
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="Statut" />
                 </SelectTrigger>
@@ -362,6 +366,20 @@ export const InvestorListTable = () => {
                   <Button className="w-full" onClick={() => setShowAdvancedFilters(false)}>
                     Appliquer les filtres
                   </Button>
+
+                  {(minInvested || maxInvested) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setMinInvested("");
+                        setMaxInvested("");
+                      }}
+                      className="w-full mt-1"
+                    >
+                      Réinitialiser le montant
+                    </Button>
+                  )}
                 </div>
               </PopoverContent>
             </Popover>
@@ -408,6 +426,25 @@ export const InvestorListTable = () => {
               )}
             </div>
           )}
+
+          {/* Aide pour les filtres restrictifs */}
+          {investors && investors.length < 5 && investors.length > 0 && (
+            <div className="text-sm text-yellow-600 bg-yellow-50 p-2 rounded mb-2">
+              <AlertTriangle className="h-4 w-4 inline mr-1" />
+              {investors.length} {investors.length === 1 ? 'résultat' : 'résultats'} trouvé{investors.length > 1 ? 's' : ''}.
+              Vos filtres sont peut-être trop spécifiques.
+              {!hasAdvancedFilters && (
+                <span> Essayez d'utiliser des filtres avancés pour affiner votre recherche.</span>
+              )}
+            </div>
+          )}
+
+          {investors && investors.length === 0 && hasAdvancedFilters && (
+            <div className="text-sm text-red-600 bg-red-50 p-2 rounded mb-2">
+              <X className="h-4 w-4 inline mr-1" />
+              Aucun résultat trouvé. Essayez d'élargir vos critères de recherche.
+            </div>
+          )}
         </div>
 
         <div className="overflow-x-auto flex-grow">
@@ -438,8 +475,8 @@ export const InvestorListTable = () => {
                     <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded-md" /></TableCell>
                   </TableRow>
                 ))
-              ) : filteredInvestors.length > 0 ? (
-                filteredInvestors.map((investor) => {
+              ) : investors.length > 0 ? (
+                investors.map((investor) => {
                   const isBanned = investor.banned_until && new Date(investor.banned_until) > new Date();
                   const activeContractsCount = countActiveContracts(investor.contracts);
                   return (
@@ -538,7 +575,7 @@ export const InvestorListTable = () => {
       </div>
 
       {/* Activation/Deactivation Confirmation Dialog */}
-      <AlertDialog open={activationDialog.isOpen} onOpenChange={(open) => setActivationDialog({ isOpen: open })}>
+      <AlertDialog open={activationDialog.isOpen} onOpenChange={(open) => setActivationDialog({ isOpen: open }) }>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>

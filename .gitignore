@@ -57,3 +57,7 @@ secrets/
 
 # Antigravity artifacts (ne pas commiter)
 .gemini/
+
+# Ignorer les fichiers Markdown et le dossier testsprite_tests
+*.md
+testsprite_tests/

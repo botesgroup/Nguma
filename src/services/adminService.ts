@@ -128,7 +128,7 @@ export interface InvestorFilters {
 }
 
 export const getInvestorsList = async (filters: InvestorFilters = {}) => {
-  const { searchQuery, page = 1, pageSize = 10, dateFrom, dateTo, minInvested, maxInvested, country, city } = filters;
+  const { searchQuery, page = 1, pageSize = 10, dateFrom, dateTo, minInvested, maxInvested, country, city, status } = filters;
 
   const { data, error } = await supabase.rpc('get_investor_list_details', {
     p_search_query: searchQuery || null,
@@ -138,8 +138,9 @@ export const getInvestorsList = async (filters: InvestorFilters = {}) => {
     p_date_to: dateTo || null,
     p_min_invested: minInvested || null,
     p_max_invested: maxInvested || null,
-    p_country: country || null,
-    p_city: city || null
+    param_country: country || null,
+    param_city: city || null,
+    p_status_filter: status || null
   });
 
   if (error) {
@@ -149,6 +150,27 @@ export const getInvestorsList = async (filters: InvestorFilters = {}) => {
 
   // The RPC returns a single JSON object with 'data' and 'count' keys.
   return data as any;
+};
+
+export const exportInvestorsList = async (filters: InvestorFilters = {}) => {
+  const { searchQuery, dateFrom, dateTo, minInvested, maxInvested, country, city, status } = filters;
+
+  const { data, error } = await supabase.rpc('export_investor_list', {
+    p_search_query: searchQuery || null,
+    p_date_from: dateFrom || null,
+    p_date_to: dateTo || null,
+    p_min_invested: minInvested || null,
+    p_max_invested: maxInvested || null,
+    param_country: country || null,
+    param_city: city || null,
+    p_status_filter: status === 'all' ? null : status
+  });
+
+  if (error) {
+    console.error("Error exporting investors list:", error);
+    throw new Error("Could not export investors list.");
+  }
+  return data as any[];
 };
 
 // --- Admin Actions ---
