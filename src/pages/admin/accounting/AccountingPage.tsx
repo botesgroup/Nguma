@@ -84,19 +84,13 @@ const AccountingPage = () => {
             {/* Main Stats Cards */}
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
                 {/* Accounting Balances */}
+                {/* Accounting Balances - Consolidated */}
                 <StatCard
-                    title="Banque Principale"
-                    value={formatCurrency(accountingStats?.['Banque Principale'] || 0)}
+                    title="Trésorerie Totale (Banque + Crypto)"
+                    value={formatCurrency((accountingStats?.['Banque Principale'] || 0) + (accountingStats?.['Portefeuille Crypto'] || 0))}
                     icon={Landmark}
                     isLoading={isLoadingAccStats}
-                    gradient="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border-blue-500/20"
-                />
-                <StatCard
-                    title="Portefeuille Crypto"
-                    value={formatCurrency(accountingStats?.['Portefeuille Crypto'] || 0)}
-                    icon={Wallet}
-                    isLoading={isLoadingAccStats}
-                    gradient="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/20"
+                    gradient="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border-emerald-500/20"
                 />
                 <StatCard
                     title="Soldes Liquides (Non investis)"
@@ -106,12 +100,7 @@ const AccountingPage = () => {
                     gradient="bg-gradient-to-br from-yellow-500/10 to-red-500/10 border-yellow-500/20"
                 />
                 {/* Contract & Insurance Stats */}
-                <StatCard
-                    title="Contrats Actifs"
-                    value={contractStats?.active_contracts_count?.toString() || '0'}
-                    icon={FileText}
-                    isLoading={isLoadingContractStats}
-                />
+
                 <StatCard
                     title="Capital Total Investi"
                     value={formatCurrency(contractStats?.total_capital_invested)}
@@ -176,8 +165,8 @@ const AccountingPage = () => {
                         <Button onClick={() => setDate({ from: startOfMonth(today), to: today })}>Ce mois-ci</Button>
                     </div>
 
-                     <div className="grid gap-4 md:grid-cols-2">
-                         <StatCard
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <StatCard
                             title="Montant Total des Dépôts"
                             value={formatCurrency(depositSummary?.total_deposits)}
                             icon={DollarSign}
@@ -189,7 +178,7 @@ const AccountingPage = () => {
                             icon={FileText}
                             isLoading={isLoadingDeposits}
                         />
-                     </div>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -242,8 +231,8 @@ const AccountingPage = () => {
                         <Button onClick={() => setDate({ from: startOfMonth(today), to: today })}>Ce mois-ci</Button>
                     </div>
 
-                     <div className="grid gap-4 md:grid-cols-2">
-                         <StatCard
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <StatCard
                             title="Montant Total des Retraits"
                             value={formatCurrency(withdrawalSummary?.total_withdrawals)}
                             icon={DollarSign}
@@ -255,7 +244,7 @@ const AccountingPage = () => {
                             icon={FileText}
                             isLoading={isLoadingWithdrawals}
                         />
-                     </div>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -279,16 +268,36 @@ const AccountingPage = () => {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        <TableHead>Utilisateur</TableHead>
                                         <TableHead>Contrat</TableHead>
-                                        <TableHead>Date Prévue</TableHead>
+                                        <TableHead>Échéance</TableHead>
                                         <TableHead className="text-right">Montant</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {upcomingProfits.map((profit) => (
                                         <TableRow key={`${profit.contract_id}-${profit.expected_date}`}>
-                                            <TableCell className="font-medium">{profit.contract_name}</TableCell>
-                                            <TableCell>{new Date(profit.expected_date).toLocaleDateString()}</TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium">{profit.user_name}</span>
+                                                    <span className="text-xs text-muted-foreground">{profit.user_email}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-sm font-mono text-muted-foreground">{profit.contract_name}</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <span>{new Date(profit.expected_date).toLocaleDateString()}</span>
+                                                    {profit.days_remaining <= 1 ? (
+                                                        <span className="inline-flex items-center rounded-full bg-red-500/10 px-2 py-1 text-xs font-medium text-red-500 ring-1 ring-inset ring-red-500/20">
+                                                            {profit.days_remaining === 0 ? "Aujourd'hui" : "Demain"}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2 py-1 text-xs font-medium text-blue-500 ring-1 ring-inset ring-blue-500/20">
+                                                            J-{profit.days_remaining}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </TableCell>
                                             <TableCell className="text-right font-bold text-green-500">
                                                 {formatCurrency(profit.amount)}
                                             </TableCell>

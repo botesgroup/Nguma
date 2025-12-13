@@ -4,7 +4,7 @@ import { Resend } from "https://esm.sh/resend@3.2.0";
 // --- TYPES & INTERFACES (Pour la robustesse) ---
 
 interface EmailParams {
-  to: string;
+  to: string | string[]; // NOW: string OR string[]
   name: string;
   amount?: number;
   reason?: string;
@@ -13,6 +13,7 @@ interface EmailParams {
   method?: string; // Méthode de paiement
   proof_url?: string; // URL de la preuve de transfert
   date?: string; // Date formatée
+  support_phone?: string; // Numéro de support WhatsApp
 }
 
 interface TemplateData {
@@ -59,6 +60,18 @@ const formatDate = (): string => {
   });
 };
 
+const generateSupportHtml = (phone?: string): string => {
+  if (!phone) return '';
+  return `
+    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #666; text-align: center;">
+      <p>Besoin d'aide ? Contactez notre support sur WhatsApp : <br>
+      <a href="https://wa.me/${phone.replace(/[^0-9]/g, '')}" style="color: #25D366; font-weight: bold; text-decoration: none;">
+        ${phone}
+      </a></p>
+    </div>
+  `;
+};
+
 // --- TEMPLATES (Optimisés Anti-Spam) ---
 
 const templates: Record<string, (p: EmailParams) => TemplateData> = {
@@ -80,6 +93,7 @@ const templates: Record<string, (p: EmailParams) => TemplateData> = {
         </table>
       </div>
       <div class="cta-buttons"><a href="${SITE_URL}/wallet" class="btn btn-primary">Consulter mon solde</a></div>
+      ${generateSupportHtml(p.support_phone)}
     `
   }),
 
@@ -210,7 +224,9 @@ const templates: Record<string, (p: EmailParams) => TemplateData> = {
           <tr><td>Taux appliqué :</td><td>Standard (15%)</td></tr>
         </table>
       </div>
+      </div>
       <div class="cta-buttons"><a href="${SITE_URL}/dashboard" class="btn btn-primary">Gérer mon contrat</a></div>
+      ${generateSupportHtml(p.support_phone)}
     `
   }),
 
@@ -304,6 +320,35 @@ const templates: Record<string, (p: EmailParams) => TemplateData> = {
         <p>Si vous recevez cet e-mail, cela signifie que la partie "envoi" fonctionne correctement.</p>
         <p>Merci de vérifier le score sur mail-tester.com.</p>
       </div>
+    `
+  }),
+
+  // 13. Relance Fonds Dormants (Automatisé)
+  dormant_funds_reminder: (p) => ({
+    subject: `Votre capital dort... réveillez-le !`,
+    previewText: `Vous avez ${formatCurrency(p.amount)} prêts à être investis.`,
+    text: `Bonjour ${p.name}, vous avez des fonds disponibles (${formatCurrency(p.amount)}) sur votre compte Nguma.`,
+    body: `
+      <div class="status-badge info">Opportunité</div>
+      <h2>Votre argent n'attend que vous</h2>
+      <p class="lead">Nous avons remarqué que vous avez <strong>${formatCurrency(p.amount)}</strong> sur votre balance qui ne génèrent pas encore de profits.</p>
+      
+      <div class="info-card">
+        <p>En activant un contrat aujourd'hui, vous pourriez commencer à percevoir des rendements dès le mois prochain.</p>
+        <table class="info-table">
+          <tr><td>Solde disponible :</td><td class="amount-highlight">${formatCurrency(p.amount)}</td></tr>
+          <tr><td>Rendement estimé :</td><td>15% / mois</td></tr>
+        </table>
+      </div>
+
+      <div class="cta-buttons">
+        <a href="${SITE_URL}/contracts" class="btn btn-primary">Créer un contrat maintenant</a>
+      </div>
+      
+      <p style="font-size: 12px; color: #666; text-align: center; margin-top: 30px;">
+        Si vous avez déjà prévu d'investir, ignorez ce message. Vous ne recevrez pas d'autre rappel cette semaine.
+      </p>
+      ${generateSupportHtml(p.support_phone)}
     `
   })
 };
@@ -406,8 +451,59 @@ serve(async (req) => {
   try {
     // 3. Parse Body
     const payload = await req.json();
+
+    // --- BATCH PROCESSING (New) ---
+    if (payload.template_id === 'dormant_funds_reminder_batch' && Array.isArray(payload.recipients)) {
+      const results = [];
+      const recipients = payload.recipients as EmailParams[];
+
+      console.log(`Processing batch of ${recipients.length} emails...`);
+
+      for (const recipient of recipients) {
+        try {
+          // Reuse existing logic
+          const batchParams = { ...recipient, template_id: 'dormant_funds_reminder' };
+          const renderTemplate = templates['dormant_funds_reminder'];
+          if (!renderTemplate) continue;
+
+          const { subject, body, text, previewText } = renderTemplate(batchParams);
+          const html = generateEmailHtml(body, previewText);
+
+          // Send with Resend
+          const { data, error } = await resend.emails.send({
+            from: `Nguma <notifications@${RESEND_FROM_DOMAIN || "nguma.org"}>`,
+            to: [recipient.to as string],
+            reply_to: `support@${RESEND_FROM_DOMAIN || "nguma.org"}`,
+            subject: subject,
+            html: html,
+            text: text,
+            tags: [{ name: 'category', value: 'dormant_batch' }]
+          });
+
+          if (error) {
+            console.error(`Failed to email ${recipient.to}:`, error);
+            results.push({ email: recipient.to, status: 'error', error });
+          } else {
+            results.push({ email: recipient.to, status: 'sent', id: data?.id });
+          }
+
+          // RATE LIMIT PROTECTION: Wait 600ms between emails (Limit is 2/sec, so 500ms min)
+          await new Promise(resolve => setTimeout(resolve, 600));
+
+        } catch (err: any) {
+          console.error(`Error processing ${recipient.to}:`, err);
+          results.push({ email: recipient.to, status: 'error', message: err.message });
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, results }), {
+        status: 200, headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    // --- SINGLE EMAIL PROCESSING (Existing) ---
     const { template_id, ...params } = payload;
-    const emailParams = params as EmailParams; // Type casting
+    const emailParams = params as EmailParams;
 
     // 4. Validation
     if (!emailParams.to || !emailParams.name || !template_id) {
@@ -434,9 +530,11 @@ serve(async (req) => {
     const domain = RESEND_FROM_DOMAIN || "nguma.org";
     const fromAddress = `Nguma <notifications@${domain}>`;
 
+    const toAddresses = Array.isArray(emailParams.to) ? emailParams.to : [emailParams.to];
+
     const { data, error } = await resend.emails.send({
       from: fromAddress,
-      to: [emailParams.to],
+      to: toAddresses,
       reply_to: `support@${domain}`,
       subject: subject,
       html: html,

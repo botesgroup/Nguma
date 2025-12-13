@@ -10,6 +10,9 @@ export interface UpcomingProfit {
     amount: number;
     expected_date: string;
     contract_name: string;
+    user_name: string;
+    user_email: string;
+    days_remaining: number;
 }
 
 export interface PaymentBatch {

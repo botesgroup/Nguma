@@ -216,6 +216,21 @@ export const updateUserProfile = async ({ userId, firstName, lastName, postNom, 
   return result;
 };
 
+export const sendAdminNotification = async ({ userId, message, priority, type = 'admin' }: { userId: string; message: string; priority: string; type?: string }) => {
+  const { data, error } = await supabase.rpc('admin_send_notification', {
+    p_user_id: userId,
+    p_message: message,
+    p_priority: priority,
+    p_type: type
+  });
+
+  if (error) throw new Error("Could not send notification.");
+
+  const result = data as { success: boolean; error?: string };
+  if (result && !result.success) throw new Error(result.error || "An unknown error occurred.");
+  return result;
+};
+
 // --- Stats ---
 export const getAdminDashboardStats = async () => {
   const { data, error } = await supabase.rpc('get_admin_stats');
@@ -257,27 +272,27 @@ export const getUserGrowthSummary = async () => {
 };
 
 export const getContractDashboardStats = async () => {
-    const { data, error } = await supabase.rpc('get_contract_dashboard_stats');
-    if (error) throw new Error("Could not fetch contract dashboard stats.");
-    return data?.[0] || null;
+  const { data, error } = await supabase.rpc('get_contract_dashboard_stats');
+  if (error) throw new Error("Could not fetch contract dashboard stats.");
+  return data?.[0] || null;
 };
 
 export const getDepositSummary = async (dateFrom: string, dateTo: string) => {
-    const { data, error } = await supabase.rpc('get_deposit_summary', {
-        start_date: dateFrom,
-        end_date: dateTo,
-    });
-    if (error) throw new Error("Could not fetch deposit summary.");
-    return data?.[0] || null;
+  const { data, error } = await supabase.rpc('get_deposit_summary', {
+    start_date: dateFrom,
+    end_date: dateTo,
+  });
+  if (error) throw new Error("Could not fetch deposit summary.");
+  return data?.[0] || null;
 };
 
 export const getWithdrawalSummary = async (dateFrom: string, dateTo: string) => {
-    const { data, error } = await supabase.rpc('get_withdrawal_summary', {
-        start_date: dateFrom,
-        end_date: dateTo,
-    });
-    if (error) throw new Error("Could not fetch withdrawal summary.");
-    return data?.[0] || null;
+  const { data, error } = await supabase.rpc('get_withdrawal_summary', {
+    start_date: dateFrom,
+    end_date: dateTo,
+  });
+  if (error) throw new Error("Could not fetch withdrawal summary.");
+  return data?.[0] || null;
 };
 
 // --- Withdrawal Management ---

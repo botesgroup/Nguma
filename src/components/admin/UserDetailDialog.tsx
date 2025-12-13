@@ -1,8 +1,10 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getUserDetails } from "@/services/adminService";
+import { getUserDetails, sendAdminNotification } from "@/services/adminService";
 import { getAuditLogs, formatAuditAction } from "@/services/auditService";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/components/ui/use-toast";
 import {
   DialogContent,
   DialogDescription,
@@ -14,6 +16,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -30,7 +35,11 @@ import {
   TrendingUp,
   ArrowUpRight,
   ArrowDownRight,
+
   Clock,
+  BellRing,
+  Send,
+  Loader2
 } from "lucide-react";
 
 interface UserDetailDialogProps {
@@ -39,6 +48,10 @@ interface UserDetailDialogProps {
 
 export const UserDetailDialog = ({ userId }: UserDetailDialogProps) => {
   const [activeTab, setActiveTab] = useState("profile");
+  const [notificationMessage, setNotificationMessage] = useState("");
+  const [notificationPriority, setNotificationPriority] = useState("medium");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch user details
   const { data, isLoading, isError } = useQuery({
@@ -60,6 +73,30 @@ export const UserDetailDialog = ({ userId }: UserDetailDialogProps) => {
 
   const formatDateTime = (date: string) => {
     return format(new Date(date), "dd MMM yyyy à HH:mm", { locale: fr });
+  };
+
+  const sendNotificationMutation = useMutation({
+    mutationFn: sendAdminNotification,
+    onSuccess: () => {
+      toast({ title: "Notification envoyée", description: "L'utilisateur a été notifié avec succès." });
+      setNotificationMessage("");
+      setNotificationPriority("medium");
+      // Optionally invalidate logs if we logged this action
+      queryClient.invalidateQueries({ queryKey: ["userAuditLogs", userId] });
+    },
+    onError: (error) => {
+      toast({ variant: "destructive", title: "Erreur", description: error.message });
+    }
+  });
+
+  const handleSendNotification = () => {
+    if (!notificationMessage.trim()) return;
+
+    sendNotificationMutation.mutate({
+      userId,
+      message: notificationMessage,
+      priority: notificationPriority
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -123,7 +160,7 @@ export const UserDetailDialog = ({ userId }: UserDetailDialogProps) => {
       </DialogHeader>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 mb-4">
+        <TabsList className="grid w-full grid-cols-6 mb-4">
           <TabsTrigger value="profile" className="text-xs">
             <User className="h-4 w-4 mr-1" />
             Profil
@@ -143,6 +180,10 @@ export const UserDetailDialog = ({ userId }: UserDetailDialogProps) => {
           <TabsTrigger value="history" className="text-xs">
             <History className="h-4 w-4 mr-1" />
             Historique
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="text-xs">
+            <BellRing className="h-4 w-4 mr-1" />
+            Notifier
           </TabsTrigger>
         </TabsList>
 
@@ -333,6 +374,71 @@ export const UserDetailDialog = ({ userId }: UserDetailDialogProps) => {
               Aucun historique d'action pour cet utilisateur
             </div>
           )}
+        </TabsContent>
+
+        {/* NOTIFICATIONS TAB */}
+        <TabsContent value="notifications" className="space-y-4">
+          <div className="p-6 border rounded-lg bg-card shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <BellRing className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <h4 className="font-semibold">Envoyer une notification directe</h4>
+                <p className="text-xs text-muted-foreground">Cette notification apparaîtra dans la cloche de l'utilisateur.</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="priority">Priorité du message</Label>
+                <Select value={notificationPriority} onValueChange={setNotificationPriority}>
+                  <SelectTrigger id="priority" className="w-[180px]">
+                    <SelectValue placeholder="Choisir la priorité" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">🟡 Basse (Info)</SelectItem>
+                    <SelectItem value="medium">🔵 Normale</SelectItem>
+                    <SelectItem value="high">🟠 Haute (Important)</SelectItem>
+                    <SelectItem value="urgent">🔴 Urgent (Action requise)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="message">Message</Label>
+                <Textarea
+                  id="message"
+                  placeholder="Votre message ici... (ex: Veuillez mettre à jour votre document d'identité)"
+                  className="min-h-[120px]"
+                  value={notificationMessage}
+                  onChange={(e) => setNotificationMessage(e.target.value)}
+                />
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button
+                  onClick={handleSendNotification}
+                  disabled={!notificationMessage.trim() || sendNotificationMutation.isPending}
+                  className="gap-2"
+                >
+                  {sendNotificationMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  Envoyer la notification
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-blue-800">
+            <p className="font-semibold mb-1 flex items-center gap-2">
+              <Clock className="h-4 w-4" /> Note sur les délais
+            </p>
+            <p>La notification apparaîtra instantanément (moins de 10 secondes) sur l'interface de l'utilisateur s'il est connecté.</p>
+          </div>
         </TabsContent>
       </Tabs>
 

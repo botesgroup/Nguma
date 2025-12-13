@@ -37,14 +37,7 @@ export type Investor = {
   wallet: Wallet | null;
   contracts: Contract[] | null;
   total_invested?: number;
-};
-
-const getInvestorStatus = (contracts: Contract[] | null): "Active" | "Inactive" | "New" => {
-  if (!contracts) return "New";
-  const hasActiveContract = contracts.some(c => c.status === 'active');
-  if (hasActiveContract) return "Active";
-  if (contracts.length > 0) return "Inactive";
-  return "New";
+  calculated_status?: string; // Field from RPC
 };
 
 const PnlCell = ({ wallet }: { wallet: Wallet | null }) => {
@@ -59,10 +52,39 @@ const PnlCell = ({ wallet }: { wallet: Wallet | null }) => {
   );
 };
 
-const StatusCell = ({ contracts }: { contracts: Contract[] | null }) => {
-  const status = getInvestorStatus(contracts);
-  const variant = status === 'Active' ? 'bg-primary/20 text-primary' : status === 'Inactive' ? 'secondary' : 'outline';
-  return <Badge className={variant}>{status}</Badge>;
+// Note: The status is now calculated by the backend RPC 'calculated_status' field.
+// We can use the 'status' passed in the investor object if we update the type,
+// OR fallback to frontend calculation if needed.
+// But the table maps `investors.map` which comes from RPC.
+// Let's rely on the RPC 'calculated_status' if available, or fallback.
+
+const getInvestorStatus = (contracts: Contract[] | null): "Active" | "Inactive" | "New" => {
+  if (!contracts) return "New";
+  const hasActiveContract = contracts.some(c => c.status === 'active');
+  if (hasActiveContract) return "Active";
+  if (contracts.length > 0) return "Inactive";
+  return "New";
+};
+
+const StatusCell = ({ status }: { status?: string }) => {
+  let variant = 'outline';
+  let label = status;
+
+  if (status === 'Active') {
+    variant = 'bg-green-100 text-green-800 hover:bg-green-200 border-green-200';
+    label = 'Actif';
+  } else if (status === 'Dormant') {
+    variant = 'bg-amber-100 text-amber-800 hover:bg-amber-200 border-amber-200';
+    label = 'Fonds Dormants';
+  } else if (status === 'Inactive') {
+    variant = 'bg-gray-100 text-gray-800 hover:bg-gray-200';
+    label = 'Inactif';
+  } else if (status === 'New') {
+    variant = 'bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-100';
+    label = 'Nouveau';
+  }
+
+  return <Badge className={variant}>{label}</Badge>;
 };
 
 // Check if user is new (registered < 7 days ago)
@@ -230,8 +252,8 @@ export const InvestorListTable = () => {
                 <FileDown className="h-4 w-4 mr-2" />
                 {isExporting ? "Export..." : "Exporter CSV"}
               </Button>
-              <Select 
-                value={statusFilter} 
+              <Select
+                value={statusFilter}
                 onValueChange={(value) => {
                   setStatusFilter(value);
                   setPage(1);
@@ -243,6 +265,7 @@ export const InvestorListTable = () => {
                 <SelectContent>
                   <SelectItem value="all">Tous</SelectItem>
                   <SelectItem value="Active">Actifs</SelectItem>
+                  <SelectItem value="Dormant">Fonds Dormants (À Relancer)</SelectItem>
                   <SelectItem value="Inactive">Inactifs</SelectItem>
                   <SelectItem value="New">Nouveaux</SelectItem>
                 </SelectContent>
@@ -507,7 +530,7 @@ export const InvestorListTable = () => {
                           <span className="text-muted-foreground text-sm">0</span>
                         )}
                       </TableCell>
-                      <TableCell><StatusCell contracts={investor.contracts} /></TableCell>
+                      <TableCell><StatusCell status={investor.calculated_status || getInvestorStatus(investor.contracts)} /></TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
@@ -575,7 +598,7 @@ export const InvestorListTable = () => {
       </div>
 
       {/* Activation/Deactivation Confirmation Dialog */}
-      <AlertDialog open={activationDialog.isOpen} onOpenChange={(open) => setActivationDialog({ isOpen: open }) }>
+      <AlertDialog open={activationDialog.isOpen} onOpenChange={(open) => setActivationDialog({ isOpen: open })}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>

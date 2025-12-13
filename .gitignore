@@ -60,4 +60,8 @@ secrets/
 
 # Ignorer les fichiers Markdown et le dossier testsprite_tests
 *.md
+!README.md
+RAPPORT_SECURITE_NGUMA.md
+RESUME_SESSION_ANALYSE_COMPTABLE.md
+security_audit.md
 testsprite_tests/
