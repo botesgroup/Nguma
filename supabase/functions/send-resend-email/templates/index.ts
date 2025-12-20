@@ -40,7 +40,20 @@ import {
 import { refundTemplates } from './categories/transactions/refunds.ts';
 
 export const TEMPLATES: Record<string, EmailTemplate> = {
-  // ...
+  // Transaction Templates
+  deposit_approved: depositApprovedTemplate,
+  deposit_rejected: depositRejectedTemplate,
+  deposit_pending: depositPendingTemplate,
+  withdrawal_approved: withdrawalApprovedTemplate,
+  withdrawal_rejected: withdrawalRejectedTemplate,
+  withdrawal_pending: withdrawalPendingTemplate,
+  withdrawal_approved_with_proof: withdrawalApprovedWithProofTemplate,
+  monthly_profit: monthlyProfitTemplate,
+  new_investment: newInvestmentTemplate,
+  reinvestment_confirmed: reinvestmentConfirmedTemplate,
+  contract_ended: contractEndedTemplate,
+  contract_expiring_soon: contractExpiringSoonTemplate,
+
   // Security Templates
   security_alert: securityAlertTemplate,
   withdrawal_otp: withdrawalOtpTemplate,
