@@ -115,5 +115,22 @@ export const updateProfile = async (profileData: Partial<Profile>) => {
     throw new Error("Could not update profile.");
   }
 
+  // Send a notification email as a side effect
+  if (data) {
+    try {
+      const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
+      await sendEmailNotification({
+        template_id: 'profile_updated_by_user',
+        to: data.email,
+        name: fullName || 'Cher utilisateur',
+        userId: data.id,
+        date: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      });
+    } catch (emailError) {
+      console.error("Profile updated, but failed to send notification email:", emailError);
+      // Do not re-throw, as the primary action was successful
+    }
+  }
+
   return data;
 };

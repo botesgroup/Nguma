@@ -95,6 +95,20 @@ export function use2FA() {
                 return false;
             }
 
+            // --- Send 2FA Setup Confirmation Notification ---
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            if (!userError && user) {
+                const profile = await getProfile();
+                if (profile?.email) {
+                    await sendResendNotification('2fa_setup_confirmed', {
+                        to: profile.email,
+                        name: profile.first_name || 'Cher utilisateur',
+                        date: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                        userId: user.id
+                    });
+                }
+            }
+
             toast({
                 title: '✅ 2FA activée !',
                 description: 'Votre compte est sécurisé. Un email de confirmation a été envoyé (vérifiez vos spams).',
@@ -231,6 +245,22 @@ export function use2FA() {
                     description: 'Impossible de générer les codes de backup.',
                 });
                 return { codes: [], success: false };
+            }
+
+            // --- Send Security Notification ---
+            try {
+                const profile = await getProfile();
+                if (profile?.email) {
+                    await sendResendNotification('backup_codes_generated', {
+                        to: profile.email,
+                        name: profile.first_name || 'Cher utilisateur',
+                        date: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                        userId: user.id
+                    });
+                }
+            } catch (emailError) {
+                console.error("Failed to send backup codes generated email:", emailError);
+                // Do not re-throw, as this is a non-critical side effect
             }
 
             return { codes, success: true };

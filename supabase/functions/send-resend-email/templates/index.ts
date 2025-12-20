@@ -9,6 +9,8 @@ import { monthlyProfitTemplate, newInvestmentTemplate, contractEndedTemplate, re
 import { securityAlertTemplate } from './categories/security/securityAlert.ts';
 import { withdrawalOtpTemplate, passwordChangedTemplate, emailChangedOldAddressTemplate, emailChangedNewAddressTemplate, twoFactorSetupConfirmedTemplate, twoFactorDisabledConfirmedTemplate } from './categories/security/auth.ts';
 import { profileTemplates } from './categories/security/profiles.ts'; // ✅ Imported profile templates
+import { profileUpdatedByUserTemplate } from './categories/security/profile-update.ts';
+import { backupCodesGeneratedTemplate } from './categories/security/backup-codes.ts';
 
 // Import admin templates
 import {
@@ -29,6 +31,7 @@ import {
   depositAvailabilityReminderTemplate,
   testMailTesterTemplate
 } from './categories/marketing/marketing.ts';
+import { welcomeNewUserTemplate } from './categories/marketing/welcome.ts';
 
 // Import support templates
 import {
@@ -62,9 +65,11 @@ export const TEMPLATES: Record<string, EmailTemplate> = {
   email_changed_new_address: emailChangedNewAddressTemplate,
   '2fa_setup_confirmed': twoFactorSetupConfirmedTemplate,
   '2fa_disabled_confirmed': twoFactorDisabledConfirmedTemplate,
+  backup_codes_generated: backupCodesGeneratedTemplate,
 
   // Profile Templates
   profile_updated_by_admin: profileTemplates[0], // ✅ Added profile template
+  profile_updated_by_user: profileUpdatedByUserTemplate,
 
   // Admin Templates
   // ...
@@ -78,6 +83,7 @@ export const TEMPLATES: Record<string, EmailTemplate> = {
   new_contract_admin: newContractAdminTemplate,               // ✅ NOUVEAU - Notification admin nouveau contrat
 
   // Marketing & System Templates
+  welcome_new_user: welcomeNewUserTemplate,
   dormant_funds_reminder: dormantFundsReminderTemplate,
   notification_preferences_updated: notificationPreferencesUpdatedTemplate, // ⏳ READY (not integrated in NotificationSettings.tsx yet)
   deposit_availability_reminder: depositAvailabilityReminderTemplate,
