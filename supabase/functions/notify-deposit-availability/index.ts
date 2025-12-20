@@ -116,8 +116,14 @@ Deno.serve(async (req) => {
             body: JSON.stringify(emailPayload),
           }).then(async response => {
             if (!response.ok) {
-              const errorBody = await response.json();
-              console.error(`Failed to send email to ${profile.email}. Status: ${response.status}. Error: ${errorBody.error}`);
+              let errorBody;
+              try {
+                errorBody = await response.json();
+              } catch (e) {
+                // If parsing JSON fails, try to get the raw text.
+                errorBody = await response.text();
+              }
+              console.error(`Failed to send email to ${profile.email}. Status: ${response.status}. Body:`, errorBody);
             }
             return response;
           })

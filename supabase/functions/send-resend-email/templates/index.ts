@@ -37,12 +37,7 @@ import {
 } from './categories/support/supportRequest.ts';
 
 // Import refund templates
-import {
-  refundRequestedTemplate,
-  newRefundRequestTemplate,
-  refundApprovedTemplate,
-  refundRejectedTemplate
-} from './categories/transactions/refunds.ts';
+import { refundTemplates } from './categories/transactions/refunds.ts';
 
 export const TEMPLATES: Record<string, EmailTemplate> = {
   // ...
