@@ -1,436 +1,29 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { Resend } from "https://esm.sh/resend@3.2.0";
-
-// --- TYPES & INTERFACES (Pour la robustesse) ---
-
-interface EmailParams {
-  to: string | string[]; // NOW: string OR string[]
-  name: string;
-  amount?: number;
-  reason?: string;
-  otp_code?: string;
-  email?: string; // Pour les notifs admin
-  method?: string; // Méthode de paiement
-  proof_url?: string; // URL de la preuve de transfert
-  date?: string; // Date formatée
-  support_phone?: string; // Numéro de support WhatsApp
-}
-
-interface TemplateData {
-  subject: string;
-  text: string;
-  body: string;
-  previewText: string; // Texte invisible qui s'affiche sous l'objet dans Gmail
-}
+import { authenticateUser, isServiceRole } from '../_shared/auth.ts';
+import {
+  TEMPLATES,
+  validateTemplateParams,
+  getTemplate,
+  type EmailParams
+} from './templates/index.ts';
+import { createTemplateHelpers } from './templates/helpers.ts';
 
 // --- CONFIGURATION ---
-
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const RESEND_FROM_DOMAIN = Deno.env.get("RESEND_FROM_DOMAIN"); // ex: updates.nguma.org
+const RESEND_FROM_DOMAIN = Deno.env.get("RESEND_FROM_DOMAIN");
 const SITE_URL = Deno.env.get("SITE_URL") || "https://nguma.org";
 
 const resend = new Resend(RESEND_API_KEY);
+const supabaseAdmin = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+);
 
-// --- HELPERS ---
-
-const formatCurrency = (amount?: number): string => {
-  if (amount === undefined || amount === null) return "0,00 $";
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2
-  }).format(amount);
-};
-
-const escapeHtml = (unsafe: string | undefined): string => {
-  if (!unsafe) return '';
-  return String(unsafe)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-};
-
-const formatDate = (): string => {
-  return new Date().toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  });
-};
-
-const generateSupportHtml = (phone?: string): string => {
-  if (!phone) return '';
-  return `
-    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #666; text-align: center;">
-      <p>Besoin d'aide ? Contactez notre support sur WhatsApp : <br>
-      <a href="https://wa.me/${phone.replace(/[^0-9]/g, '')}" style="color: #25D366; font-weight: bold; text-decoration: none;">
-        ${phone}
-      </a></p>
-    </div>
-  `;
-};
-
-// --- TEMPLATES (Optimisés Anti-Spam) ---
-
-const templates: Record<string, (p: EmailParams) => TemplateData> = {
-
-  // 1. Dépôt Approuvé
-  deposit_approved: (p) => ({
-    subject: `Crédit confirmé sur votre compte`, // Moins agressif que "Statut dépôt"
-    previewText: `Les fonds de ${formatCurrency(p.amount)} sont disponibles.`,
-    text: `Bonjour ${p.name}, votre dépôt de ${formatCurrency(p.amount)} est confirmé.`,
-    body: `
-      <div class="status-badge success">Opération validée</div>
-      <h2>Fonds disponibles</h2>
-      <p class="lead">Votre transaction récente a été traitée avec succès. Le montant a été crédité sur votre balance.</p>
-      <div class="info-card">
-        <table class="info-table">
-          <tr><td>Montant crédité :</td><td class="amount-success">${formatCurrency(p.amount)}</td></tr>
-          <tr><td>Référence :</td><td>Dépôt</td></tr>
-          <tr><td>Date :</td><td>${formatDate()}</td></tr>
-        </table>
-      </div>
-      <div class="cta-buttons"><a href="${SITE_URL}/wallet" class="btn btn-primary">Consulter mon solde</a></div>
-      ${generateSupportHtml(p.support_phone)}
-    `
-  }),
-
-  // 2. Dépôt Rejeté
-  deposit_rejected: (p) => ({
-    subject: `Mise à jour concernant votre transaction`, // Neutre
-    previewText: `Nous ne pouvons pas valider votre opération de ${formatCurrency(p.amount)}.`,
-    text: `Bonjour ${p.name}, votre transaction n'a pas pu aboutir.`,
-    body: `
-      <div class="status-badge error">Opération non aboutie</div>
-      <h2>Information importante</h2>
-      <p class="lead">Nous avons analysé votre demande de dépôt. Pour des raisons de sécurité ou de conformité, elle n'a pas pu être validée.</p>
-      <div class="info-card error-card">
-        <table class="info-table">
-          <tr><td>Montant :</td><td>${formatCurrency(p.amount)}</td></tr>
-          <tr><td>Motif :</td><td class="rejection-reason">${escapeHtml(p.reason || "Vérification incomplète")}</td></tr>
-        </table>
-      </div>
-      <div class="cta-buttons"><a href="${SITE_URL}/support" class="btn btn-primary">Contacter le support</a></div>
-    `
-  }),
-
-  // 3. Dépôt En Attente
-  deposit_pending: (p) => ({
-    subject: `Réception de votre demande`,
-    previewText: `Votre demande de ${formatCurrency(p.amount)} est en cours d'analyse.`,
-    text: `Bonjour ${p.name}, nous analysons votre demande.`,
-    body: `
-      <div class="status-badge info">En cours de traitement</div>
-      <h2>Demande reçue</h2>
-      <p class="lead">Nous avons bien reçu les détails de votre transaction. Nos services procèdent actuellement aux vérifications d'usage.</p>
-      <div class="info-card">
-        <table class="info-table">
-          <tr><td>Montant :</td><td class="amount-highlight">${formatCurrency(p.amount)}</td></tr>
-          <tr><td>Délai estimé :</td><td>24h ouvrées</td></tr>
-        </table>
-      </div>
-    `
-  }),
-
-  // 4. Retrait Approuvé
-  withdrawal_approved: (p) => ({
-    subject: `Validation de votre transfert sortant`,
-    previewText: `Le retrait de ${formatCurrency(p.amount)} a été approuvé.`,
-    text: `Bonjour ${p.name}, votre retrait est validé.`,
-    body: `
-      <div class="status-badge success">Transfert validé</div>
-      <h2>Opération confirmée</h2>
-      <p class="lead">Votre demande de retrait a été validée par nos services financiers. Les fonds sont en route vers votre compte de destination.</p>
-      <div class="info-card">
-        <table class="info-table">
-          <tr><td>Montant retiré :</td><td class="amount-success">${formatCurrency(p.amount)}</td></tr>
-          <tr><td>Statut :</td><td>Envoyé</td></tr>
-        </table>
-      </div>
-    `
-  }),
-
-  // 5. Retrait Rejeté
-  withdrawal_rejected: (p) => ({
-    subject: `Information sur votre demande de retrait`,
-    previewText: `Impossible de traiter le retrait de ${formatCurrency(p.amount)}.`,
-    text: `Bonjour ${p.name}, votre retrait n'a pas pu être traité.`,
-    body: `
-      <div class="status-badge error">Transfert annulé</div>
-      <h2>Action requise</h2>
-      <p class="lead">Votre demande de retrait n'a pas pu être finalisée. Aucun montant n'a été débité de votre solde.</p>
-      <div class="info-card error-card">
-        <table class="info-table">
-          <tr><td>Montant :</td><td>${formatCurrency(p.amount)}</td></tr>
-          <tr><td>Raison :</td><td class="rejection-reason">${escapeHtml(p.reason || "Données incorrectes")}</td></tr>
-        </table>
-      </div>
-    `
-  }),
-
-  // 6. Retrait En Attente
-  withdrawal_pending: (p) => ({
-    subject: `Demande de retrait enregistrée`,
-    previewText: `Confirmation de votre demande de ${formatCurrency(p.amount)}.`,
-    text: `Bonjour ${p.name}, votre demande est enregistrée.`,
-    body: `
-      <div class="status-badge info">Vérification en cours</div>
-      <h2>Demande enregistrée</h2>
-      <p class="lead">Vous avez initié une demande de retrait. Pour votre sécurité, notre équipe va valider cette opération manuellement.</p>
-      <div class="info-card">
-        <table class="info-table">
-          <tr><td>Montant demandé :</td><td class="amount-highlight">${formatCurrency(p.amount)}</td></tr>
-          <tr><td>Délai :</td><td>24-48h</td></tr>
-        </table>
-      </div>
-    `
-  }),
-
-  // 7. Profit Mensuel (ATTENTION SPAM : Vocabulaire changé)
-  monthly_profit: (p) => ({
-    subject: `Relevé mensuel : Nouveau crédit`, // "Profit" supprimé du sujet
-    previewText: `Un montant de ${formatCurrency(p.amount)} a été ajouté à votre solde.`,
-    text: `Bonjour ${p.name}, votre solde a été mis à jour.`,
-    body: `
-      <div class="status-badge success">Solde mis à jour</div>
-      <h2>Relevé mensuel</h2>
-      <p class="lead">Le rendement mensuel de votre plan actif a été crédité sur votre compte.</p>
-      <div class="info-card success-card">
-        <table class="info-table">
-          <tr><td>Montant crédité :</td><td class="amount-success">${formatCurrency(p.amount)}</td></tr>
-          <tr><td>Origine :</td><td>Rendement mensuel</td></tr>
-          <tr><td>Date :</td><td>${formatDate()}</td></tr>
-        </table>
-      </div>
-      <div class="cta-buttons"><a href="${SITE_URL}/wallet" class="btn btn-primary">Voir mon tableau de bord</a></div>
-    `
-  }),
-
-  // 8. Nouvel Investissement (Vocabulaire "Contrat" préféré à "Investissement")
-  new_investment: (p) => ({
-    subject: `Confirmation d'activation de contrat`,
-    previewText: `Votre plan de ${formatCurrency(p.amount)} est maintenant actif.`,
-    text: `Félicitations ${p.name}, votre contrat est actif.`,
-    body: `
-      <div class="status-badge success">Contrat Actif</div>
-      <h2>Activation confirmée</h2>
-      <p class="lead">Votre souscription a bien été prise en compte. Votre capital commence à travailler dès aujourd'hui selon les termes prévus.</p>
-      <div class="info-card success-card">
-        <table class="info-table">
-          <tr><td>Capital initial :</td><td class="amount-success">${formatCurrency(p.amount)}</td></tr>
-          <tr><td>Durée :</td><td>12 mois</td></tr>
-          <tr><td>Taux appliqué :</td><td>Standard (15%)</td></tr>
-        </table>
-      </div>
-      </div>
-      <div class="cta-buttons"><a href="${SITE_URL}/dashboard" class="btn btn-primary">Gérer mon contrat</a></div>
-      ${generateSupportHtml(p.support_phone)}
-    `
-  }),
-
-  // 9. OTP Code (Sécurité)
-  withdrawal_otp: (p) => ({
-    subject: `Code de vérification`,
-    previewText: `Votre code de sécurité est ${p.otp_code}.`,
-    text: `Votre code est ${p.otp_code}.`,
-    body: `
-      <div class="status-badge info">Sécurité</div>
-      <h2>Vérification d'identité</h2>
-      <p class="lead">Vous avez initié un retrait de <strong>${formatCurrency(p.amount)}</strong>. Utilisez ce code unique pour valider l'opération.</p>
-      
-      <div style="background: white; border: 2px solid #667eea; border-radius: 12px; padding: 20px; text-align: center; margin: 30px 0;">
-        <span style="display:block; font-size: 14px; color: #666; margin-bottom: 8px;">Code de validation</span>
-        <span style="display:block; font-size: 32px; color: #1F2937; letter-spacing: 8px; font-weight: 700; font-family: monospace;">${p.otp_code}</span>
-      </div>
-      
-      <p style="font-size: 12px; color: #666;">Si vous n'êtes pas à l'origine de cette demande, changez immédiatement votre mot de passe.</p>
-    `
-  }),
-
-  // 10. Admin Notifications (Simplifié)
-  new_deposit_request: (p) => ({
-    subject: `[ADMIN] Nouveau Dépôt : ${formatCurrency(p.amount)}`,
-    previewText: `Utilisateur : ${p.name}`,
-    text: `Nouveau dépôt à valider.`,
-    body: `<h2>Admin : Nouveau Dépôt</h2><p>Utilisateur: ${escapeHtml(p.email)}<br>Montant: <strong>${formatCurrency(p.amount)}</strong></p><a href="${SITE_URL}/admin/deposits" class="btn btn-primary">Traiter</a>`
-  }),
-
-  new_withdrawal_request: (p) => ({
-    subject: `[ADMIN] Nouveau Retrait : ${formatCurrency(p.amount)}`,
-    previewText: `Utilisateur : ${p.name}`,
-    text: `Nouveau retrait à valider.`,
-    body: `<h2>Admin : Nouveau Retrait</h2><p>Utilisateur: ${escapeHtml(p.email)}<br>Montant: <strong>${formatCurrency(p.amount)}</strong></p><a href="${SITE_URL}/admin/withdrawals" class="btn btn-primary">Traiter</a>`
-  }),
-
-  // 12. Retrait Approuvé avec Preuve (OBLIGATOIRE)
-  withdrawal_approved_with_proof: (p) => ({
-    subject: `Confirmation de transfert - ${formatCurrency(p.amount)}`,
-    previewText: `Votre retrait a été transféré. Preuve jointe.`,
-    text: `Bonjour ${p.name}, votre retrait de ${formatCurrency(p.amount)} a été transféré. Preuve disponible : ${p.proof_url}`,
-    body: `
-      <div class="status-badge success">Transfert Effectué ✅</div>
-      <h2>Opération Confirmée</h2>
-      <p class="lead">Votre demande de retrait a été approuvée et transférée vers votre compte. Vous trouverez ci-dessous la preuve officielle du transfert.</p>
-      
-      <div class="info-card success-card">
-        <h3 style="margin-top:0;">📋 Détails du Transfert</h3>
-        <table class="info-table">
-          <tr><td>Méthode :</td><td><strong>${escapeHtml(p.method || 'N/A')}</strong></td></tr>
-          <tr><td>Montant net :</td><td class="amount-success">${formatCurrency(p.amount)}</td></tr>
-          <tr><td>Date :</td><td>${p.date || formatDate()}</td></tr>
-          <tr><td>Statut :</td><td style="color:#059669;">✓ Envoyé</td></tr>
-        </table>
-      </div>
-
-      <div class="info-card" style="margin-top: 30px; background: #F0FDF4; border-color: #BBF7D0;">
-        <h3 style="margin-top:0; color: #059669;">📑 Preuve de Transfert</h3>
-        <p>Voici la confirmation officielle de votre transfert :</p>
-        <div style="text-align: center; margin: 20px 0; background: white; padding: 15px; border-radius: 8px;">
-          <img src="${p.proof_url}" alt="Preuve de transfert" 
-               style="max-width: 100%; height: auto; border-radius: 8px; border: 2px solid #D1FAE5; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" />
-        </div>
-        <div class="cta-buttons">
-          <a href="${p.proof_url}" download class="btn btn-primary" style="background-color: #059669;">
-            📥 Télécharger la preuve
-          </a>
-        </div>
-        <p style="font-size: 12px; color: #059669; margin-top: 15px; text-align: center;">
-          💡 Conservez cette preuve pour vos archives personnelles.
-        </p>
-      </div>
-      
-      <div class="cta-buttons" style="margin-top: 30px;">
-        <a href="${SITE_URL}/wallet" class="btn btn-primary">Voir mon historique</a>
-      </div>
-    `
-  }),
-
-  // 11. Test Template for Mail Tester
-  test_mail_tester: (p) => ({
-    subject: `Email de Test pour Nguma`,
-    previewText: `Ceci est un test de délivrabilité.`,
-    text: `Bonjour ${p.name}, ceci est un e-mail de test envoyé depuis le système Nguma pour vérifier la configuration de l'envoi.`,
-    body: `
-      <div class="status-badge info">Test Technique</div>
-      <h2>Vérification du système d'envoi</h2>
-      <p class="lead">Cet e-mail a été envoyé pour vérifier la configuration du serveur (SPF, DKIM, DMARC) et la qualité du template HTML.</p>
-      <div class="info-card">
-        <p>Si vous recevez cet e-mail, cela signifie que la partie "envoi" fonctionne correctement.</p>
-        <p>Merci de vérifier le score sur mail-tester.com.</p>
-      </div>
-    `
-  }),
-
-  // 13. Relance Fonds Dormants (Automatisé)
-  dormant_funds_reminder: (p) => ({
-    subject: `Votre capital dort... réveillez-le !`,
-    previewText: `Vous avez ${formatCurrency(p.amount)} prêts à être investis.`,
-    text: `Bonjour ${p.name}, vous avez des fonds disponibles (${formatCurrency(p.amount)}) sur votre compte Nguma.`,
-    body: `
-      <div class="status-badge info">Opportunité</div>
-      <h2>Votre argent n'attend que vous</h2>
-      <p class="lead">Nous avons remarqué que vous avez <strong>${formatCurrency(p.amount)}</strong> sur votre balance qui ne génèrent pas encore de profits.</p>
-      
-      <div class="info-card">
-        <p>En activant un contrat aujourd'hui, vous pourriez commencer à percevoir des rendements dès le mois prochain.</p>
-        <table class="info-table">
-          <tr><td>Solde disponible :</td><td class="amount-highlight">${formatCurrency(p.amount)}</td></tr>
-          <tr><td>Rendement estimé :</td><td>15% / mois</td></tr>
-        </table>
-      </div>
-
-      <div class="cta-buttons">
-        <a href="${SITE_URL}/contracts" class="btn btn-primary">Créer un contrat maintenant</a>
-      </div>
-      
-      <p style="font-size: 12px; color: #666; text-align: center; margin-top: 30px;">
-        Si vous avez déjà prévu d'investir, ignorez ce message. Vous ne recevrez pas d'autre rappel cette semaine.
-      </p>
-      ${generateSupportHtml(p.support_phone)}
-    `
-  })
-};
-
-// --- HTML GENERATOR (CSS Inliné + Preheader) ---
-
-function generateEmailHtml(content: string, previewText: string): string {
-  // Le "Preheader" est une astuce pour afficher du texte dans la liste des emails sans l'afficher dans le corps
-  const preheaderHtml = `
-    <span style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">
-      ${previewText}
-      &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
-    </span>
-  `;
-
-  return `
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nguma Notification</title>
-  <style>
-    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #F3F4F6; margin: 0; padding: 0; color: #374151; }
-    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; margin-top: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    .header { background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); padding: 30px; text-align: center; }
-    .logo { color: white; font-size: 24px; font-weight: bold; letter-spacing: 2px; text-decoration: none; }
-    .content { padding: 40px 30px; }
-    .footer { background-color: #F9FAFB; padding: 20px; text-align: center; font-size: 12px; color: #9CA3AF; border-top: 1px solid #E5E7EB; }
-    
-    /* Components */
-    .btn { display: inline-block; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; margin-top: 20px; }
-    .btn-primary { background-color: #4F46E5; color: #ffffff !important; }
-    
-    .status-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; }
-    .success { background-color: #D1FAE5; color: #065F46; }
-    .error { background-color: #FEE2E2; color: #991B1B; }
-    .info { background-color: #DBEAFE; color: #1E40AF; }
-    
-    .info-card { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px; margin: 20px 0; }
-    .success-card { background: #F0FDF4; border-color: #BBF7D0; }
-    .error-card { background: #FEF2F2; border-color: #FECACA; }
-    
-    .info-table { width: 100%; }
-    .info-table td { padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-    .info-table td:last-child { text-align: right; font-weight: bold; border-bottom: none; }
-    .info-table tr:last-child td { border-bottom: none; }
-    
-    .amount-success { color: #059669; font-size: 18px; }
-    .amount-highlight { color: #4F46E5; font-size: 18px; }
-    .rejection-reason { color: #DC2626; }
-    .cta-buttons { text-align: center; }
-    
-    @media only screen and (max-width: 600px) {
-      .content { padding: 20px; }
-    }
-  </style>
-</head>
-<body>
-  ${preheaderHtml}
-  <div class="container">
-    <div class="header">
-      <div class="logo">NGUMA</div>
-    </div>
-    <div class="content">
-      ${content}
-    </div>
-    <div class="footer">
-      <p>Cet email automatique concerne votre compte Nguma.</p>
-      <p>© ${new Date().getFullYear()} Nguma Inc. Kinshasa, RDC.</p>
-      <a href="${SITE_URL}/settings/notifications" style="color:#9CA3AF; text-decoration:underline;">Gérer mes préférences</a>
-    </div>
-  </div>
-</body>
-</html>
-  `;
-}
-
-// --- SERVER HANDLER ---
-
+// --- MAIN HANDLER ---
 serve(async (req) => {
-  // 1. CORS Pre-flight
+  // CORS Pre-flight
   if (req.method === "OPTIONS") {
     return new Response("ok", {
       headers: {
@@ -440,20 +33,38 @@ serve(async (req) => {
     });
   }
 
-  // 2. Env check
-  if (!RESEND_API_KEY) {
-    console.error("CRITICAL: RESEND_API_KEY is missing");
-    return new Response(JSON.stringify({ error: "Server configuration error" }), {
-      status: 500, headers: { "Content-Type": "application/json" }
-    });
-  }
-
   try {
-    // 3. Parse Body
+    console.log(`DEBUG: Function ${Deno.env.get('SB_FUNCTION_NAME') || 'send-resend-email'} triggered at ${req.url}`);
+
+    // Authentication
+    const isSvc = isServiceRole(req);
+    if (!isSvc) {
+      try {
+        await authenticateUser(req);
+      } catch (e: any) {
+        console.error('Authentication error:', e.message);
+        console.log('DEBUG: Received headers:', Object.fromEntries(req.headers.entries()));
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+
+    // Check environment
+    if (!RESEND_API_KEY) {
+      console.error("CRITICAL: RESEND_API_KEY is missing");
+      return new Response(JSON.stringify({ error: "Server configuration error" }), {
+        status: 500, headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    // Parse payload
     const payload = await req.json();
+    const { template_id, ...params } = payload;
+    const emailParams = params as EmailParams;
 
     // --- BATCH PROCESSING (New) ---
-    if (payload.template_id === 'dormant_funds_reminder_batch' && Array.isArray(payload.recipients)) {
+    if (template_id === 'dormant_funds_reminder_batch' && Array.isArray(payload.recipients)) {
       const results = [];
       const recipients = payload.recipients as EmailParams[];
 
@@ -461,30 +72,39 @@ serve(async (req) => {
 
       for (const recipient of recipients) {
         try {
-          // Reuse existing logic
-          const batchParams = { ...recipient, template_id: 'dormant_funds_reminder' };
-          const renderTemplate = templates['dormant_funds_reminder'];
-          if (!renderTemplate) continue;
+          const batchTemplateId = 'dormant_funds_reminder'; // Specific template for batch
+          const template = getTemplate(batchTemplateId);
+          const helpers = createTemplateHelpers(SITE_URL);
 
-          const { subject, body, text, previewText } = renderTemplate(batchParams);
-          const html = generateEmailHtml(body, previewText);
+          const validationErrors = validateTemplateParams(batchTemplateId, recipient, helpers);
+          if (validationErrors.length > 0) {
+            results.push({ email: recipient.to, status: 'validation_error', errors: validationErrors });
+            continue;
+          }
 
-          // Send with Resend
+          const { subject, html, text, previewText } = template.render(recipient, helpers);
+
+          const domain = RESEND_FROM_DOMAIN || "nguma.org";
+          const fromAddress = `Nguma <notifications@${domain}>`;
+          const toAddresses = Array.isArray(recipient.to) ? recipient.to : [recipient.to];
+
           const { data, error } = await resend.emails.send({
-            from: `Nguma <notifications@${RESEND_FROM_DOMAIN || "nguma.org"}>`,
-            to: [recipient.to as string],
-            reply_to: `support@${RESEND_FROM_DOMAIN || "nguma.org"}`,
+            from: fromAddress,
+            to: toAddresses,
+            reply_to: `support@${domain}`,
             subject: subject,
             html: html,
             text: text,
-            tags: [{ name: 'category', value: 'dormant_batch' }]
+            tags: [{ name: 'category', value: template.category }, { name: 'app', value: 'nguma' }]
           });
 
           if (error) {
             console.error(`Failed to email ${recipient.to}:`, error);
             results.push({ email: recipient.to, status: 'error', error });
+            await logEmailError(recipient, batchTemplateId, error.message);
           } else {
             results.push({ email: recipient.to, status: 'sent', id: data?.id });
+            await logEmailSuccess(recipient, batchTemplateId, data?.id);
           }
 
           // RATE LIMIT PROTECTION: Wait 600ms between emails (Limit is 2/sec, so 500ms min)
@@ -502,68 +122,120 @@ serve(async (req) => {
     }
 
     // --- SINGLE EMAIL PROCESSING (Existing) ---
-    const { template_id, ...params } = payload;
-    const emailParams = params as EmailParams;
-
-    // 4. Validation
-    if (!emailParams.to || !emailParams.name || !template_id) {
-      return new Response(JSON.stringify({ error: "Missing required fields (to, name, template_id)" }), {
+    // Validation
+    if (!emailParams.to || !template_id) {
+      return new Response(JSON.stringify({ error: "Missing required fields (to, template_id)" }), {
         status: 400, headers: { "Content-Type": "application/json" }
       });
     }
 
-    // 5. Template Lookup
-    const renderTemplate = templates[template_id];
-    if (!renderTemplate) {
-      return new Response(JSON.stringify({ error: `Invalid template_id: ${template_id}` }), {
-        status: 404, headers: { "Content-Type": "application/json" }
-      });
-    }
+    // Get template
+    const template = getTemplate(template_id);
 
-    // 6. Generate Content
-    const { subject, body, text, previewText } = renderTemplate(emailParams);
-    const html = generateEmailHtml(body, previewText);
+    // Create helpers
+    const helpers = createTemplateHelpers(SITE_URL);
 
-    // 7. Send via Resend
-    // Important: Utiliser un sous-domaine si possible (ex: updates@notifications.nguma.org)
-    // Si RESEND_FROM_DOMAIN est vide, fallback sur une valeur sûre
+    // Render template
+    const { subject, text, html, previewText } = template.render(emailParams, helpers);
+
+    // Send email
     const domain = RESEND_FROM_DOMAIN || "nguma.org";
     const fromAddress = `Nguma <notifications@${domain}>`;
+    // Prepare email addresses - handle comma-separated strings from SQL string_agg
+    const toAddresses = Array.isArray(emailParams.to)
+      ? emailParams.to
+      : emailParams.to.split(',').map(email => email.trim()).filter(email => email.length > 0);
 
-    const toAddresses = Array.isArray(emailParams.to) ? emailParams.to : [emailParams.to];
-
-    const { data, error } = await resend.emails.send({
+    const { data: resendData, error: resendError } = await resend.emails.send({
       from: fromAddress,
       to: toAddresses,
       reply_to: `support@${domain}`,
-      subject: subject,
-      html: html,
-      text: text, // Version texte brut importante pour l'anti-spam
+      subject,
+      html,
+      text,
       tags: [
-        { name: 'category', value: template_id }, // Utile pour les analytics Resend
+        { name: 'category', value: template.category },
         { name: 'app', value: 'nguma' }
       ],
       headers: {
-        'List-Unsubscribe': `<${SITE_URL}/settings/notifications>`, // Critique pour Gmail
+        'List-Unsubscribe': `<${SITE_URL}/settings/notifications>`,
         'X-Entity-Ref-ID': crypto.randomUUID()
       }
     });
 
-    if (error) {
-      console.error("Resend Error:", error);
-      return new Response(JSON.stringify({ error: error.message }), {
+    if (resendError) {
+      console.error("Resend Error:", resendError);
+      await logEmailError(emailParams, template_id, resendError.message || "Unknown Resend error");
+      return new Response(JSON.stringify({ error: resendError.message || "Unknown Resend error" }), {
         status: 500, headers: { "Content-Type": "application/json" }
       });
     }
 
-    return new Response(JSON.stringify(data), {
+    await logEmailSuccess(emailParams, template_id, subject, text, resendData?.id);
+
+    return new Response(JSON.stringify({
+      success: true,
+      messageId: resendData?.id,
+      template: template_id,
+      category: template.category
+    }), {
       status: 200, headers: { "Content-Type": "application/json" }
     });
 
   } catch (e: any) {
     console.error("Worker Error:", e);
-    return new Response(JSON.stringify({ error: e.message || "Internal Server Error" }), {
+    return new Response(JSON.stringify({
+      error: e.message || "Internal Server Error",
+      stack: Deno.env.get("DENO_ENV") === "development" ? e.stack : undefined
+    }), {
       status: 500, headers: { "Content-Type": "application/json" }
     });
   }
 });
+
+// Helper functions for logging
+async function logEmailError(params: EmailParams, templateId: string, error: string) {
+  if (params.notificationId) {
+    await supabaseAdmin
+      .from('notifications')
+      .update({
+        status: 'failed',
+        sent_at: new Date().toISOString(),
+        error_message: error
+      })
+      .eq('id', params.notificationId);
+  }
+}
+
+async function logEmailSuccess(params: EmailParams, templateId: string, subject: string, body: string, messageId?: string) {
+  try {
+    if (params.userId) {
+      // Basic insert into notifications (common columns)
+      // We avoid columns that might not exist yet to prevent crashes
+      const { error } = await supabaseAdmin
+        .from('notifications')
+        .insert({
+          user_id: params.userId,
+          message: `Email envoyé: ${subject}`,
+          type: 'system',
+          priority: 'low',
+          is_read: true // Already sent/read from email perspective
+        });
+
+      if (error) console.error('Error logging email success to notifications:', error);
+    } else if (params.notificationId) {
+      // Update existing notification if ID provided
+      const { error } = await supabaseAdmin
+        .from('notifications')
+        .update({
+          is_read: true,
+          message: `Email envoyé: ${subject}`
+        })
+        .eq('id', params.notificationId);
+
+      if (error) console.error('Error updating notification log:', error);
+    }
+  } catch (err) {
+    console.error('Panic in logEmailSuccess:', err);
+  }
+}

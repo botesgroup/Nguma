@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
+import { sendEmailNotification } from "./notificationOrchestrationService"; // Import the notification service
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
@@ -21,13 +22,12 @@ export const getProfile = async (): Promise<Profile | null> => {
     throw new Error("Could not fetch profile data.");
   }
 
-  // Si le profil existe dans la table 'profiles', le retourner
+  // Si le profil existe déjà, le retourner
   if (data) {
     return data;
   }
 
-  // Si aucun profil n'existe (ex: 1ère connexion OAuth), construire un profil de base
-  // à partir des données de l'utilisateur authentifié.
+  // Si aucun profil n'existe (ex: 1ère connexion OAuth/email), le créer
   if (!data && user) {
     // Essayer de séparer le nom complet en prénom et nom
     const fullName = user.user_metadata.full_name || '';
@@ -35,13 +35,12 @@ export const getProfile = async (): Promise<Profile | null> => {
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
-    return {
+    const newProfile: Profile = {
       id: user.id,
       email: user.email || '',
       first_name: user.user_metadata.first_name || firstName,
       last_name: user.user_metadata.last_name || lastName,
       avatar_url: user.user_metadata.avatar_url || null,
-      // Les autres champs seront null ou vides par défaut
       post_nom: null,
       phone: null,
       country: null,
@@ -49,14 +48,43 @@ export const getProfile = async (): Promise<Profile | null> => {
       address: null,
       birth_date: null,
       updated_at: null,
-      created_at: user.created_at, // On peut utiliser la date de création de l'utilisateur auth
+      created_at: user.created_at,
       total_invested: 0,
       risk_profile: 'not_set',
       investment_goals: null,
       is_active: true,
       subscription_tier: 'standard',
-      last_login: null
-    } as Profile;
+      last_login: null,
+    };
+
+    // Insérer le nouveau profil dans la base de données
+    const { data: insertedProfile, error: insertError } = await supabase
+      .from('profiles')
+      .insert(newProfile)
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("Error inserting new profile:", insertError);
+      throw new Error("Could not create new user profile.");
+    }
+
+    // Si l'insertion réussit, envoyer l'e-mail de bienvenue
+    if (insertedProfile) {
+      try {
+        await sendEmailNotification({
+          template_id: 'welcome_new_user',
+          to: newProfile.email,
+          name: fullName || `${newProfile.first_name} ${newProfile.last_name}`.trim() || 'Nouvel utilisateur',
+          userId: newProfile.id,
+        });
+      } catch (emailError) {
+        console.error("Failed to send welcome email:", emailError);
+        // Do not throw, email is a non-critical side effect
+      }
+    }
+
+    return insertedProfile;
   }
 
   return null;

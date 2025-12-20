@@ -52,22 +52,22 @@ BEGIN
         updated_at = now()
     WHERE user_id = transaction_data.user_id;
 
-    -- Préparer et envoyer l'email de confirmation
-    payload := jsonb_build_object(
-        'template_id', 'withdrawal_approved_with_proof',
-        'to', profile_data.email,
-        'name', profile_data.first_name || ' ' || profile_data.last_name,
-        'amount', transaction_data.amount,
-        'method', transaction_data.method,
-        'proof_url', p_proof_url,
-        'date', to_char(now(), 'DD/MM/YYYY')
-    );
-
-    PERFORM net.http_post(
-        url := project_url || '/functions/v1/send-resend-email',
-        headers := jsonb_build_object('Content-Type', 'application/json'),
-        body := payload
-    );
+    -- Mettre en file d'attente l'email de confirmation
+    IF profile_data.email IS NOT NULL THEN
+        INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+        VALUES (
+            'withdrawal_approved_with_proof',
+            transaction_data.user_id,
+            profile_data.email,
+            jsonb_build_object(
+                'name', profile_data.first_name || ' ' || profile_data.last_name,
+                'amount', transaction_data.amount,
+                'method', transaction_data.method,
+                'proof_url', p_proof_url,
+                'date', to_char(now(), 'DD/MM/YYYY')
+            )
+        );
+    END IF;
 
     -- Message de notification
     notification_message := 'Retrait approuvé: Votre retrait de ' || transaction_data.amount || ' USD a été approuvé et transféré. Consultez la preuve dans votre email.';

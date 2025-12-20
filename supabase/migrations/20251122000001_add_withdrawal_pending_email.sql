@@ -55,24 +55,16 @@ BEGIN
         CASE WHEN verification_record.method = 'mobile_money' THEN verification_record.payment_details ELSE NULL END
     ) INTO withdrawal_result;
 
-    -- ✅ NEW: Send withdrawal_pending confirmation email to the user
-    -- Get user profile for email
-    SELECT email, first_name, last_name INTO profile_data
-    FROM public.profiles
-    WHERE id = v_user_id;
-
     IF profile_data IS NOT NULL THEN
-        payload := jsonb_build_object(
-            'template_id', 'withdrawal_pending',
-            'to', profile_data.email,
-            'name', profile_data.first_name || ' ' || profile_data.last_name,
-            'amount', verification_record.amount
-        );
-
-        PERFORM net.http_post(
-            url := project_url || '/functions/v1/send-resend-email',
-            headers := jsonb_build_object('Content-Type', 'application/json'),
-            body := payload
+        INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+        VALUES (
+            'withdrawal_pending',
+            v_user_id,
+            profile_data.email,
+            jsonb_build_object(
+                'name', profile_data.first_name || ' ' || profile_data.last_name,
+                'amount', verification_record.amount
+            )
         );
     END IF;
 

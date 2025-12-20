@@ -6,6 +6,9 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 
+import { sendResendNotification } from "@/services/resendNotificationService"; // New import
+import { getProfile } from "@/services/profileService"; // To get user's full_name
+
 export interface MFAEnrollment {
     id: string;
     qrCode: string;
@@ -122,6 +125,20 @@ export function use2FA() {
                     description: 'Impossible de désactiver la 2FA.',
                 });
                 return false;
+            }
+
+            // --- Send 2FA Disable Confirmation Notification ---
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            if (!userError && user) {
+                const profile = await getProfile(); // Fetch profile to get full_name
+                if (profile?.email) {
+                    await sendResendNotification('2fa_disabled_confirmed', {
+                        to: profile.email,
+                        name: profile.first_name || 'Cher utilisateur',
+                        date: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                        userId: user.id
+                    });
+                }
             }
 
             toast({

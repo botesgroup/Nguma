@@ -3,7 +3,6 @@
  * Affiche un QR code à scanner avec Google Authenticator ou similaire
  */
 
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { use2FA, type MFAEnrollment } from '@/hooks/use2FA';
@@ -12,6 +11,11 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, Shield, Smartphone, CheckCircle2 } from 'lucide-react';
+
+import { sendResendNotification } from "@/services/resendNotificationService"; // New import
+import { getProfile } from "@/services/profileService"; // To get user's full_name
+import { supabase } from '@/integrations/supabase/client';
+
 
 export default function Setup2FA() {
     const navigate = useNavigate();
@@ -37,6 +41,20 @@ export default function Setup2FA() {
 
         const success = await verify(enrollment.id, code);
         if (success) {
+            // --- Send 2FA Setup Confirmation Notification ---
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            if (!userError && user) {
+                const profile = await getProfile(); // Fetch profile to get full_name
+                if (profile?.email) {
+                    await sendResendNotification('2fa_setup_confirmed', {
+                        to: profile.email,
+                        name: profile.first_name || 'Cher utilisateur',
+                        date: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                        userId: user.id
+                    });
+                }
+            }
+
             // Générer les codes de backup
             const result = await generateBackupCodes();
             if (result.success) {

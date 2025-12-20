@@ -64,23 +64,22 @@ BEGIN
         'medium'
     );
 
-    -- Notify admins (existing code)
+    -- Enqueue notifications for admins
     FOR admin_record IN
-        SELECT u.email FROM auth.users u
+        SELECT u.id, u.email FROM auth.users u
         JOIN public.user_roles ur ON u.id = ur.user_id
         WHERE ur.role = 'admin'
     LOOP
-        payload := jsonb_build_object(
-            'template_id', 'new_deposit_request',
-            'to', admin_record.email,
-            'name', profile_data.first_name || ' ' || profile_data.last_name,
-            'email', profile_data.email,
-            'amount', deposit_amount
-        );
-        PERFORM net.http_post(
-            url := project_url || '/functions/v1/send-resend-email',
-            headers := jsonb_build_object('Content-Type', 'application/json'),
-            body := payload
+        INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+        VALUES (
+            'new_deposit_request',
+            admin_record.id,
+            admin_record.email,
+            jsonb_build_object(
+                'name', profile_data.first_name || ' ' || profile_data.last_name,
+                'email', profile_data.email,
+                'amount', deposit_amount
+            )
         );
     END LOOP;
 
@@ -160,23 +159,22 @@ BEGIN
         'medium'
     );
 
-    -- Notify admins (existing code)
+    -- Enqueue notifications for admins
     FOR admin_record IN
-        SELECT u.email FROM auth.users u
+        SELECT u.id, u.email FROM auth.users u
         JOIN public.user_roles ur ON u.id = ur.user_id
         WHERE ur.role = 'admin'
     LOOP
-        payload := jsonb_build_object(
-            'template_id', 'new_withdrawal_request',
-            'to', admin_record.email,
-            'name', profile_data.first_name || ' ' || profile_data.last_name,
-            'email', profile_data.email,
-            'amount', withdraw_amount
-        );
-        PERFORM net.http_post(
-            url := project_url || '/functions/v1/send-resend-email',
-            headers := jsonb_build_object('Content-Type', 'application/json'),
-            body := payload
+        INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+        VALUES (
+            'new_withdrawal_request',
+            admin_record.id,
+            admin_record.email,
+            jsonb_build_object(
+                'name', profile_data.first_name || ' ' || profile_data.last_name,
+                'email', profile_data.email,
+                'amount', withdraw_amount
+            )
         );
     END LOOP;
 

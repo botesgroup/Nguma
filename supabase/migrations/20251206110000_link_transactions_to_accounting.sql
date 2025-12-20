@@ -116,24 +116,18 @@ BEGIN
         'medium'
     );
 
-    -- Send email to the user
+    -- Enqueue email to the user
     IF user_profile.email IS NOT NULL THEN
-        payload := jsonb_build_object(
-            'template_id', 'deposit_approved',
-            'to', user_profile.email,
-            'name', user_profile.first_name || ' ' || user_profile.last_name,
-            'amount', transaction_record.amount
+        INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+        VALUES (
+            'deposit_approved',
+            transaction_record.user_id,
+            user_profile.email,
+            jsonb_build_object(
+                'name', user_profile.first_name || ' ' || user_profile.last_name,
+                'amount', transaction_record.amount
+            )
         );
-
-        BEGIN
-            PERFORM net.http_post(
-                url := project_url || '/functions/v1/send-resend-email',
-                headers := jsonb_build_object('Content-Type', 'application/json'),
-                body := payload
-            );
-        EXCEPTION WHEN OTHERS THEN
-            RAISE WARNING 'Failed to send email notification: %', SQLERRM;
-        END;
     END IF;
 
     RETURN json_build_object('success', true);
@@ -235,22 +229,22 @@ BEGIN
         UPDATE public.company_accounts SET balance = balance - transaction_data.amount WHERE id = client_deposits_id;
     END IF;
 
-    -- Prepare and send email
-    payload := jsonb_build_object(
-        'template_id', 'withdrawal_approved_with_proof',
-        'to', profile_data.email,
-        'name', profile_data.first_name || ' ' || profile_data.last_name,
-        'amount', transaction_data.amount,
-        'method', transaction_data.method,
-        'proof_url', p_proof_url,
-        'date', to_char(now(), 'DD/MM/YYYY')
-    );
-
-    PERFORM net.http_post(
-        url := project_url || '/functions/v1/send-resend-email',
-        headers := jsonb_build_object('Content-Type', 'application/json'),
-        body := payload
-    );
+    -- Enqueue email
+    IF profile_data.email IS NOT NULL THEN
+        INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+        VALUES (
+            'withdrawal_approved_with_proof',
+            transaction_data.user_id,
+            profile_data.email,
+            jsonb_build_object(
+                'name', profile_data.first_name || ' ' || profile_data.last_name,
+                'amount', transaction_data.amount,
+                'method', transaction_data.method,
+                'proof_url', p_proof_url,
+                'date', to_char(now(), 'DD/MM/YYYY')
+            )
+        );
+    END IF;
 
     -- Notification message
     notification_message := 'Retrait approuvé: Votre retrait de ' || transaction_data.amount || ' USD a été approuvé et transféré. Consultez la preuve dans votre email.';

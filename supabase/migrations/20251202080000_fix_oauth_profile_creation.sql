@@ -63,6 +63,21 @@ BEGIN
     INSERT INTO public.user_roles (user_id, role)
     VALUES (NEW.id, 'investor');
 
+    -- Enqueue admin notification for new user registration
+    INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+    SELECT
+        'new_user_registered_admin',
+        u.id, -- ID de l'admin
+        u.email, -- Email de l'admin
+        jsonb_build_object(
+            'name', v_first_name || ' ' || v_last_name, -- Nom du nouvel utilisateur
+            'email', NEW.email, -- Email du nouvel utilisateur
+            'userId', NEW.id::text -- ID du nouvel utilisateur
+        )
+    FROM auth.users u
+    JOIN public.user_roles ur ON u.id = ur.user_id
+    WHERE ur.role = 'admin';
+
     RETURN NEW;
 END;
 $$;

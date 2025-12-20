@@ -36,19 +36,16 @@ BEGIN
   UPDATE public.notifications SET is_read = true WHERE reference_id = transaction_id_to_approve;
   INSERT INTO public.notifications (user_id, message, link_to) VALUES (target_transaction.user_id, 'Votre retrait de ' || target_transaction.amount || ' ' || target_transaction.currency || ' a été approuvé.', '/wallet');
   
-  -- Send email to the user
   IF user_profile.email IS NOT NULL THEN
-      payload := jsonb_build_object(
-          'template_id', 'withdrawal_approved',
-          'to', user_profile.email,
-          'name', user_profile.first_name || ' ' || user_profile.last_name,
-          'amount', target_transaction.amount
-      );
-
-      PERFORM net.http_post(
-          url := project_url || '/functions/v1/send-resend-email',
-          headers := jsonb_build_object('Content-Type', 'application/json'),
-          body := payload
+      INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+      VALUES (
+          'withdrawal_approved',
+          target_transaction.user_id,
+          user_profile.email,
+          jsonb_build_object(
+              'name', user_profile.first_name || ' ' || user_profile.last_name,
+              'amount', target_transaction.amount
+          )
       );
   END IF;
 

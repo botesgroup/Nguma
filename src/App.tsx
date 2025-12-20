@@ -42,6 +42,7 @@ const AdminTransactionsPage = lazy(() => import("./pages/admin/AdminTransactions
 const AccountingPage = lazy(() => import("./pages/admin/accounting/AccountingPage"));
 const PaymentSchedulerPage = lazy(() => import("./pages/admin/accounting/PaymentSchedulerPage"));
 const LedgerPage = lazy(() => import("./pages/admin/accounting/LedgerPage"));
+const NotificationSettings = lazy(() => import("./pages/NotificationSettings").then(module => ({ default: module.NotificationSettings }))); // Corrected import
 import { ChatButton } from "./components/ChatButton";
 
 const queryClient = new QueryClient();
@@ -69,10 +70,10 @@ const App = () => (
       <BrowserRouter>
         <NotificationProvider>
           <Suspense fallback={
-  <div className="flex items-center justify-center h-screen w-full">
-    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-  </div>
-}>
+            <div className="flex items-center justify-center h-screen w-full">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          }>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
@@ -115,6 +116,16 @@ const App = () => (
                   <ProtectedRoute>
                     <AppLayout>
                       <ProfilePage />
+                    </AppLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings/notifications" // New route for notification settings
+                element={
+                  <ProtectedRoute>
+                    <AppLayout>
+                      <NotificationSettings />
                     </AppLayout>
                   </ProtectedRoute>
                 }
@@ -169,7 +180,7 @@ const App = () => (
                   </AdminRoute>
                 }
               />
-                            <Route
+              <Route
                 path="/admin/contracts"
                 element={
                   <AdminRoute>

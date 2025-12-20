@@ -15,7 +15,7 @@ import { ReinvestDialog } from "@/components/ReinvestDialog";
 import { UpcomingPayments } from "@/components/UpcomingPayments";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, AlertCircle, CheckCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { differenceInDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +24,8 @@ import {
   useUserContractsRealtime,
   useUserProfitsRealtime,
 } from "@/hooks/useRealtimeSync";
+// Removed: import { isDepositEnabled, getDepositPeriodStatus } from "@/services/depositPeriodService";
+// Removed: import { useDepositStatus } from "@/hooks/useDepositStatus";
 
 const Dashboard = () => {
   // Get current user ID for Realtime filtering
@@ -37,10 +39,13 @@ const Dashboard = () => {
   useUserTransactionsRealtime(user?.id);
   useUserContractsRealtime(user?.id);
   useUserProfitsRealtime(user?.id);
+
   const { data: wallet, isLoading: isLoadingWallet } = useQuery({
     queryKey: ["wallet"],
     queryFn: getWallet,
   });
+
+  // Removed: const { depositStatus, isLoading: isLoadingDepositStatus, error } = useDepositStatus();
 
   const { data: contracts, isLoading: isLoadingContracts } = useQuery({
     queryKey: ["contracts"],
@@ -98,6 +103,40 @@ const Dashboard = () => {
           <WithdrawDialog wallet={wallet} />
         </div>
       </div>
+
+      {/* Removed: Indicateur de l'état des dépôts */}
+      {/* {!isLoadingDepositStatus && depositStatus && (
+        <div className={`p-4 rounded-lg border ${
+          depositStatus.isActive
+            ? 'bg-green-50 border-green-200 text-green-800'
+            : 'bg-red-50 border-red-200 text-red-800'
+        }`}>
+          <div className="flex items-center gap-2">
+            {depositStatus.isActive ? (
+              <CheckCircle className="h-5 w-5 text-green-600" />
+            ) : (
+              <AlertCircle className="h-5 w-5 text-red-600" />
+            )}
+            <div className="flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-medium">
+                  {depositStatus.isActive
+                    ? '✅ Dépôts activés'
+                    : '❌ Dépôts désactivés'}
+                </span>
+                {depositStatus.timeUntilNext && (
+                  <span className="text-sm font-semibold bg-secondary px-2 py-1 rounded whitespace-nowrap">
+                    {depositStatus.timeUntilNext}
+                  </span>
+                )}
+              </div>
+              <p className="text-sm opacity-80 mt-1">
+                {depositStatus.message}
+              </p>
+            </div>
+          </div>
+        </div>
+      )} */}
 
       {/* Wallet Cards with Loading State */}
       {isLoadingWallet || isLoadingContracts ? (

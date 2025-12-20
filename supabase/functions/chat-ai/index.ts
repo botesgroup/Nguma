@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { authenticateUser } from '../_shared/auth.ts';
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -12,6 +13,9 @@ serve(async (req) => {
     }
 
     try {
+        // ** 1. Authenticate the user **
+        const user = await authenticateUser(req);
+
         const { conversationId, message } = await req.json()
 
         if (!message || !conversationId) {
@@ -27,6 +31,21 @@ serve(async (req) => {
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         )
+
+        // ** 2. Verify conversation ownership **
+        const { data: conversation, error: convError } = await supabase
+            .from('chat_conversations')
+            .select('user_id')
+            .eq('id', conversationId)
+            .single();
+
+        if (convError || !conversation) {
+            throw new Error('Conversation not found.');
+        }
+
+        if (conversation.user_id !== user.id) {
+            throw new Error('User is not the owner of this conversation.');
+        }
 
         // 1. Générer l'embedding de la question
         const embeddingResponse = await fetch(
@@ -63,25 +82,16 @@ serve(async (req) => {
         // Timestamp de début pour analytics
         const startTime = Date.now()
 
-        // Récupérer les informations de la conversation et de l'utilisateur
-        const { data: conversation } = await supabase
-            .from('chat_conversations')
-            .select('user_id')
-            .eq('id', conversationId)
+        // ** 3. Get user context securely from the authenticated user **
+        let userContext = ''
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('subscription_tier, total_invested, risk_profile, investment_goals')
+            .eq('id', user.id) // Use authenticated user.id
             .single()
 
-        let userContext = ''
-        if (conversation) {
-            // Récupérer le profil utilisateur pour enrichir le contexte
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('subscription_tier, total_invested, risk_profile, investment_goals')
-                .eq('id', conversation.user_id)
-                .single()
-
-            if (profile) {
-                userContext = `\n**Contexte utilisateur:**\n- Niveau d'abonnement: ${profile.subscription_tier || 'standard'}\n- Investissement total: ${profile.total_invested || 0}€\n- Profil de risque: ${profile.risk_profile || 'non défini'}\n- Objectifs: ${profile.investment_goals || 'non définis'}`
-            }
+        if (profile) {
+            userContext = `\n**Contexte utilisateur:**\n- Niveau d'abonnement: ${profile.subscription_tier || 'standard'}\n- Investissement total: ${profile.total_invested || 0}€\n- Profil de risque: ${profile.risk_profile || 'non défini'}\n- Objectifs: ${profile.investment_goals || 'non définis'}`
         }
 
         // Récupérer les derniers messages de la conversation pour le contexte

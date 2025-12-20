@@ -11,13 +11,17 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$ 
 DECLARE
-    v_user_id uuid := auth.uid();
+    v_user_id uuid;
     profile_data record;
     admin_record record;
     new_transaction_id uuid;
     project_url TEXT := 'https://kaqxoavnoabcnszzmwye.supabase.co';
     payload JSONB;
 BEGIN
+    v_user_id := auth.uid();
+    IF v_user_id IS NULL THEN
+        RETURN json_build_object('success', false, 'error', 'User not authenticated');
+    END IF;
     -- Data validation
     IF deposit_amount <= 0 THEN
         RETURN json_build_object('success', false, 'error', 'Le montant du dépôt doit être positif.');
@@ -34,26 +38,22 @@ BEGIN
     VALUES (v_user_id, deposit_amount, 'deposit', 'pending', deposit_method, p_payment_reference, p_payment_phone_number)
     RETURNING id INTO new_transaction_id;
 
-    -- Loop through all admins and send them an email
+    -- Loop through all admins and enqueue email notification
     FOR admin_record IN
-        SELECT u.email FROM auth.users u
+        SELECT u.id, u.email FROM auth.users u
         JOIN public.user_roles ur ON u.id = ur.user_id
         WHERE ur.role = 'admin'
     LOOP
-        -- Construct the payload for the email
-        payload := jsonb_build_object(
-            'template_id', 'new_deposit_request',
-            'to', admin_record.email,
-            'name', profile_data.first_name || ' ' || profile_data.last_name,
-            'email', profile_data.email,
-            'amount', deposit_amount
-        );
-
-        -- Call the 'send-resend-email' edge function
-        PERFORM net.http_post(
-            url := project_url || '/functions/v1/send-resend-email',
-            headers := jsonb_build_object('Content-Type', 'application/json'),
-            body := payload
+        INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+        VALUES (
+            'new_deposit_request',
+            admin_record.id,
+            admin_record.email,
+            jsonb_build_object(
+                'name', profile_data.first_name || ' ' || profile_data.last_name,
+                'email', profile_data.email,
+                'amount', deposit_amount
+            )
         );
     END LOOP;
 

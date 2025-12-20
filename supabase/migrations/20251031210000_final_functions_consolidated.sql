@@ -60,7 +60,7 @@ BEGIN
     user_currency := 'USD'; -- Fallback to default currency if wallet is missing
   END IF;
   INSERT INTO public.transactions (user_id, type, amount, currency, status, method, description)
-  VALUES (current_user_id, 'deposit', deposit_amount, user_currency, 'pending', deposit_method, 'User deposit request via ' || deposit_method);
+  VALUES (auth.uid(), 'deposit', deposit_amount, user_currency, 'pending', deposit_method, 'User deposit request via ' || deposit_method);
   PERFORM public.notify_all_admins('Nouvelle demande de dépôt de ' || deposit_amount || ' ' || user_currency, '/admin/deposits');
   RETURN jsonb_build_object('success', true, 'message', 'Deposit request created and is pending approval.');
 END;

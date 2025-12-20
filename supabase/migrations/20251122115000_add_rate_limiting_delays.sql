@@ -61,53 +61,39 @@ BEGIN
         p_payment_reference, p_payment_phone_number, 'Dépôt via ' || deposit_method, p_proof_url
     ) RETURNING id INTO v_transaction_id;
 
-    -- Send deposit_pending email to user
-    payload := jsonb_build_object(
-        'template_id', 'deposit_pending',
-        'to', profile_data.email,
-        'name', profile_data.first_name || ' ' || profile_data.last_name,
-        'amount', deposit_amount
-    );
-
-    PERFORM net.http_post(
-        url := project_url || '/functions/v1/send-resend-email',
-        headers := jsonb_build_object(
-            'Content-Type', 'application/json',
-            'apikey', anon_key,
-            'Authorization', 'Bearer ' || anon_key
-        ),
-        body := payload
-    );
+    -- Enqueue deposit_pending email to user
+    IF profile_data.email IS NOT NULL THEN
+        INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+        VALUES (
+            'deposit_pending',
+            v_user_id,
+            profile_data.email,
+            jsonb_build_object(
+                'name', profile_data.first_name || ' ' || profile_data.last_name,
+                'amount', deposit_amount
+            )
+        );
+    END IF;
 
     -- Rate limiting: Wait 1 second before next email (Resend limit: 2/sec)
     PERFORM pg_sleep(1.0);
 
-    -- Send notification to all admins
     FOR admin_record IN
-        SELECT u.email FROM auth.users u
+        SELECT u.id, u.email FROM auth.users u
         JOIN public.user_roles ur ON u.id = ur.user_id
         WHERE ur.role = 'admin'
     LOOP
-        payload := jsonb_build_object(
-            'template_id', 'new_deposit_request',
-            'to', admin_record.email,
-            'name', profile_data.first_name || ' ' || profile_data.last_name,
-            'email', profile_data.email,
-            'amount', deposit_amount
+        INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+        VALUES (
+            'new_deposit_request',
+            admin_record.id,
+            admin_record.email,
+            jsonb_build_object(
+                'name', profile_data.first_name || ' ' || profile_data.last_name,
+                'email', profile_data.email,
+                'amount', deposit_amount
+            )
         );
-
-        PERFORM net.http_post(
-            url := project_url || '/functions/v1/send-resend-email',
-            headers := jsonb_build_object(
-                'Content-Type', 'application/json',
-                'apikey', anon_key,
-                'Authorization', 'Bearer ' || anon_key
-            ),
-            body := payload
-        );
-
-        -- Rate limiting: Wait 1 second between admin emails
-        PERFORM pg_sleep(1.0);
     END LOOP;
 
     -- Send in-app notification
@@ -173,39 +159,16 @@ BEGIN
     SET verified = TRUE
     WHERE id = p_verification_id;
 
-    -- Rate limiting: Wait 1 second after OTP email was sent
-    -- (OTP was sent by request_withdrawal_otp function)
-    PERFORM pg_sleep(1.0);
-
-    -- Process withdrawal
-    SELECT public.user_withdraw(
-        verification_record.amount,
-        verification_record.method,
-        CASE WHEN verification_record.method = 'crypto' THEN verification_record.payment_details ELSE NULL END,
-        CASE WHEN verification_record.method = 'mobile_money' THEN verification_record.payment_details ELSE NULL END
-    ) INTO withdrawal_result;
-
-    -- Send withdrawal_pending email
-    SELECT email, first_name, last_name INTO profile_data
-    FROM public.profiles
-    WHERE id = v_user_id;
-
     IF profile_data IS NOT NULL THEN
-        payload := jsonb_build_object(
-            'template_id', 'withdrawal_pending',
-            'to', profile_data.email,
-            'name', profile_data.first_name || ' ' || profile_data.last_name,
-            'amount', verification_record.amount
-        );
-
-        PERFORM net.http_post(
-            url := project_url || '/functions/v1/send-resend-email',
-            headers := jsonb_build_object(
-                'Content-Type', 'application/json',
-                'apikey', anon_key,
-                'Authorization', 'Bearer ' || anon_key
-            ),
-            body := payload
+        INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+        VALUES (
+            'withdrawal_pending',
+            v_user_id,
+            profile_data.email,
+            jsonb_build_object(
+                'name', profile_data.first_name || ' ' || profile_data.last_name,
+                'amount', verification_record.amount
+            )
         );
     END IF;
 

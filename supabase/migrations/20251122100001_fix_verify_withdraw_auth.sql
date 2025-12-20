@@ -56,21 +56,15 @@ BEGIN
     WHERE id = v_user_id;
 
     IF profile_data IS NOT NULL THEN
-        payload := jsonb_build_object(
-            'template_id', 'withdrawal_pending',
-            'to', profile_data.email,
-            'name', profile_data.first_name || ' ' || profile_data.last_name,
-            'amount', verification_record.amount
-        );
-
-        PERFORM net.http_post(
-            url := project_url || '/functions/v1/send-resend-email',
-            headers := jsonb_build_object(
-                'Content-Type', 'application/json',
-                'apikey', anon_key,
-                'Authorization', 'Bearer ' || anon_key
-            ),
-            body := payload
+        INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+        VALUES (
+            'withdrawal_pending',
+            v_user_id,
+            profile_data.email,
+            jsonb_build_object(
+                'name', profile_data.first_name || ' ' || profile_data.last_name,
+                'amount', verification_record.amount
+            )
         );
     END IF;
 

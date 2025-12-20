@@ -54,19 +54,16 @@ BEGIN
       INSERT INTO public.notifications (user_id, message, link_to) 
       VALUES (contract_record.user_id, 'Votre profit mensuel de ' || profit_amount || ' ' || contract_record.currency || ' a été versé.', '/wallet');
 
-      -- Send email to the user
       IF user_profile.email IS NOT NULL THEN
-          payload := jsonb_build_object(
-              'template_id', 'monthly_profit',
-              'to', user_profile.email,
-              'name', user_profile.first_name || ' ' || user_profile.last_name,
-              'amount', profit_amount
-          );
-
-          PERFORM net.http_post(
-              url := project_url || '/functions/v1/send-resend-email',
-              headers := jsonb_build_object('Content-Type', 'application/json'),
-              body := payload
+          INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+          VALUES (
+              'monthly_profit',
+              contract_record.user_id,
+              user_profile.email,
+              jsonb_build_object(
+                  'name', user_profile.first_name || ' ' || user_profile.last_name,
+                  'amount', profit_amount
+              )
           );
       END IF;
 

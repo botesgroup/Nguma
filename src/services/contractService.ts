@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
+import { sendEmailNotification } from "./notificationOrchestrationService";
 
 type Contract = Database['public']['Tables']['contracts']['Row'];
 
@@ -69,18 +70,51 @@ export const requestRefund = async (contractId: string) => {
  * Creates a new investment contract using the user's profit balance.
  */
 export const reinvestProfit = async (amount: number, isInsured: boolean = false) => {
-  const { data, error } = await supabase.rpc('reinvest_from_profit', {
+  const { data: rpcData, error: rpcError } = await supabase.rpc('reinvest_from_profit', {
     reinvestment_amount: amount,
     p_is_insured: isInsured
   });
 
-  if (error) {
-    console.error("Error reinvesting profit:", error.message);
+  if (rpcError) {
+    console.error("Error reinvesting profit:", rpcError.message);
     throw new Error("Failed to create reinvestment contract.");
   }
-  const response = data as unknown as { success: boolean; error?: string };
+
+  const response = rpcData as unknown as { success: boolean; error?: string };
   if (response && !response.success) {
     throw new Error(response.error || "An unknown error occurred in the database function.");
   }
+
+  // If RPC is successful, send email notification
+  if (response.success) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated for sending email.");
+
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('email, first_name, last_name')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !userProfile) {
+        throw new Error("Could not fetch user profile to send reinvestment email.");
+      }
+
+      const fullName = `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim();
+
+      await sendEmailNotification({
+        template_id: 'reinvestment_confirmed',
+        to: userProfile.email,
+        name: fullName || 'Cher investisseur',
+        amount: amount,
+        userId: user.id,
+      });
+
+    } catch (emailError) {
+      console.error("Reinvestment action succeeded, but failed to send email notification:", emailError);
+    }
+  }
+
   return response;
 };

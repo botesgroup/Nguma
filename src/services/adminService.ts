@@ -1,5 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
+import { sendEmailNotification } from "./notificationOrchestrationService";
 import type { Database } from "@/integrations/supabase/types";
 
 export type Contract = Database['public']['Tables']['contracts']['Row'];
@@ -175,20 +175,91 @@ export const exportInvestorsList = async (filters: InvestorFilters = {}) => {
 
 // --- Admin Actions ---
 export const creditUser = async ({ userId, amount, reason }: { userId: string; amount: number; reason: string }) => {
+  // Call the RPC function to perform the credit/debit
   const { data, error } = await supabase.rpc('admin_credit_user', { target_user_id: userId, credit_amount: amount, reason: reason });
-  if (error) throw new Error("Could not credit user.");
+
+  if (error) {
+    console.error("Error in admin_credit_user RPC:", error);
+    throw new Error("Could not credit or debit user.");
+  }
 
   const result = data as { success: boolean; error?: string };
-  if (result && !result.success) throw new Error(result.error || "An unknown error occurred.");
+  if (result && !result.success) {
+    throw new Error(result.error || "An unknown error occurred during the transaction.");
+  }
+
+  // If the RPC was successful, proceed with email notification
+  if (result.success) {
+    try {
+      // 1. Fetch the user's profile to get their email and name
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('email, first_name, last_name')
+        .eq('id', userId)
+        .single();
+
+      if (profileError || !userProfile) {
+        throw new Error(`Could not fetch profile for user ${userId} to send email.`);
+      }
+
+      // 2. Determine if it's a credit or debit and choose the template
+      const isCredit = amount > 0;
+      const templateId = isCredit ? 'admin_manual_credit' : 'admin_manual_debit';
+      const emailAmount = isCredit ? amount : -amount; // Ensure amount is positive for email
+
+      const fullName = `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim();
+
+      // 3. Send the email notification
+      await sendEmailNotification({
+        template_id: templateId,
+        to: userProfile.email,
+        name: fullName || 'Cher investisseur',
+        amount: emailAmount,
+        reason: reason,
+        userId: userId,
+      });
+
+    } catch (emailError) {
+      // Log the email error but don't break the flow.
+      // The primary action (crediting) was successful.
+      console.error("Credit/debit action succeeded, but failed to send email notification:", emailError);
+    }
+  }
+
   return result;
 };
 
-export const deactivateUser = async (userId: string) => {
+export const deactivateUser = async (userId: string, reason: string) => {
   const { data, error } = await supabase.rpc('admin_deactivate_user', { user_id_to_deactivate: userId });
   if (error) throw new Error("Could not deactivate user.");
 
   const result = data as { success: boolean; error?: string };
   if (result && !result.success) throw new Error(result.error || "An unknown error occurred.");
+
+  if (result.success) {
+    try {
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('email, first_name, last_name')
+        .eq('id', userId)
+        .single();
+
+      if (profileError || !userProfile) throw new Error(`Could not fetch profile for user ${userId} to send email.`);
+
+      const fullName = `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim();
+
+      await sendEmailNotification({
+        template_id: 'account_suspended',
+        to: userProfile.email,
+        name: fullName || 'Cher investisseur',
+        reason: reason,
+        userId: userId,
+      });
+    } catch (emailError) {
+      console.error("Deactivation action succeeded, but failed to send email notification:", emailError);
+    }
+  }
+
   return result;
 };
 
@@ -198,6 +269,30 @@ export const activateUser = async (userId: string) => {
 
   const result = data as { success: boolean; error?: string };
   if (result && !result.success) throw new Error(result.error || "An unknown error occurred.");
+
+  if (result.success) {
+    try {
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('email, first_name, last_name')
+        .eq('id', userId)
+        .single();
+
+      if (profileError || !userProfile) throw new Error(`Could not fetch profile for user ${userId} to send email.`);
+
+      const fullName = `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim();
+
+      await sendEmailNotification({
+        template_id: 'account_reactivated',
+        to: userProfile.email,
+        name: fullName || 'Cher investisseur',
+        userId: userId,
+      });
+    } catch (emailError) {
+      console.error("Activation action succeeded, but failed to send email notification:", emailError);
+    }
+  }
+
   return result;
 };
 
@@ -307,9 +402,15 @@ export const getPendingWithdrawals = async () => {
 };
 
 export const approveWithdrawal = async (transactionId: string, proofUrl: string) => {
+  const internalSecret = import.meta.env.VITE_INTERNAL_FUNCTION_SECRET;
+  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
+  if (!internalSecret || !adminEmail) throw new Error("Client-side secrets are not configured.");
+
   const { data, error } = await supabase.rpc('approve_withdrawal', {
     transaction_id_to_approve: transactionId,
-    p_proof_url: proofUrl
+    p_proof_url: proofUrl,
+    p_internal_secret: internalSecret,
+    p_admin_email: adminEmail
   });
   if (error) throw new Error(error.message);
 
@@ -319,7 +420,16 @@ export const approveWithdrawal = async (transactionId: string, proofUrl: string)
 };
 
 export const rejectWithdrawal = async (transactionId: string, reason: string) => {
-  const { data, error } = await supabase.rpc('reject_withdrawal', { transaction_id_to_reject: transactionId, reason: reason });
+  const internalSecret = import.meta.env.VITE_INTERNAL_FUNCTION_SECRET;
+  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
+  if (!internalSecret || !adminEmail) throw new Error("Client-side secrets are not configured.");
+
+  const { data, error } = await supabase.rpc('reject_withdrawal', {
+    transaction_id_to_reject: transactionId,
+    reason: reason,
+    p_internal_secret: internalSecret,
+    p_admin_email: adminEmail
+  });
   if (error) throw new Error(error.message);
 
   const result = data as { success: boolean; error?: string };
@@ -354,64 +464,21 @@ export const adminGetAllContracts = async (
   return data;
 };
 
-// --- Refund Management ---
-export const getPendingRefunds = async () => {
-  const { data, error } = await supabase.rpc('get_pending_refunds');
-
-  if (error) {
-    console.error("Error fetching pending refunds:", error);
-    throw new Error("Could not fetch pending refunds.");
-  }
-  return data || [];
-};
-
-export const approveRefund = async (contractId: string) => {
-  const { data, error } = await supabase.rpc('approve_refund', { _contract_id: contractId });
-  if (error) throw new Error(error.message);
-
-  const result = data as { success: boolean; error?: string };
-  if (result && !result.success) throw new Error(result.error || "An unknown error occurred.");
-  return result;
-};
-
-export const rejectRefund = async (contractId: string, reason: string) => {
-  const { data, error } = await supabase.rpc('reject_refund', { _contract_id: contractId, reason: reason });
-  if (error) throw new Error(error.message);
-
-  const result = data as { success: boolean; error?: string };
-  if (result && !result.success) throw new Error(result.error || "An unknown error occurred.");
-  return result;
-};
-
 export const adminUpdateContract = async (contractId: string, updates: Record<string, any>) => {
-  const { data, error } = await supabase.rpc('admin_update_contract', { _contract_id: contractId, _updates: updates });
-  if (error) throw new Error(error.message);
-
-  const result = data as { success: boolean; error?: string };
-  if (result && !result.success) throw new Error(result.error || "An unknown error occurred.");
-  return result;
-};
-
-// --- Transaction History ---
-export const getAdminTransactionHistory = async (
-  searchQuery: string = '',
-  typeFilter: string = 'all',
-  statusFilter: string = 'all',
-  page: number = 1,
-  pageSize: number = 10,
-  dateFrom?: string,
-  dateTo?: string
-) => {
-  const { data, error } = await supabase.rpc('get_admin_transaction_history', {
-    p_search_query: searchQuery || null,
-    p_type_filter: typeFilter,
-    p_status_filter: statusFilter,
-    p_page_num: page,
-    p_page_size: pageSize,
-    p_date_from: dateFrom || null,
-    p_date_to: dateTo || null,
+  const { data, error } = await supabase.rpc('admin_update_contract', {
+    _contract_id: contractId,
+    _updates: updates,
   });
 
-  if (error) throw new Error(error.message);
-  return data as { data: any[], count: number };
+  if (error) {
+    console.error("Error updating contract:", error);
+    throw new Error(error.message || "Could not update contract.");
+  }
+
+  const result = data as { success: boolean; message?: string; error?: string };
+  if (result && !result.success) {
+    throw new Error(result.error || "An unknown error occurred while updating the contract.");
+  }
+
+  return result;
 };

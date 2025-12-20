@@ -88,15 +88,12 @@ BEGIN
     IF v_payload IS NOT NULL AND jsonb_array_length(v_payload) > 0 THEN
         v_count := jsonb_array_length(v_payload);
 
-        -- Send ONE Batch Request
-        PERFORM net.http_post(
-            url := v_project_url || '/functions/v1/send-resend-email',
-            headers := jsonb_build_object(
-                'Content-Type', 'application/json', 
-                'Authorization', 'Bearer ' || v_service_role_key
-            ),
-            body := jsonb_build_object(
-                'template_id', 'dormant_funds_reminder_batch', -- New Batch Template ID
+        -- Enqueue ONE Batch Request
+        INSERT INTO public.notifications_queue (template_id, recipient_email, notification_params)
+        VALUES (
+            'dormant_funds_reminder_batch', -- This template ID triggers batch processing in send-resend-email
+            NULL, -- No single recipient email for batch, will be handled by params
+            jsonb_build_object(
                 'recipients', v_payload
             )
         );

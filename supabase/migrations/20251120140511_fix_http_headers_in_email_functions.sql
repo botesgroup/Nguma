@@ -52,16 +52,15 @@ BEGIN
 
     -- FIXED: Use simple headers like withdrawal functions
     IF user_profile.email IS NOT NULL THEN
-        payload := jsonb_build_object(
-            'template_id', 'deposit_approved',
-            'to', user_profile.email,
-            'name', COALESCE(user_profile.first_name || ' ' || user_profile.last_name, 'Investisseur'),
-            'amount', transaction_record.amount
-        );
-        PERFORM net.http_post(
-            url := project_url || '/functions/v1/send-resend-email',
-            headers := jsonb_build_object('Content-Type', 'application/json'),
-            body := payload
+        INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+        VALUES (
+            'deposit_approved',
+            transaction_record.user_id,
+            user_profile.email,
+            jsonb_build_object(
+                'name', COALESCE(user_profile.first_name || ' ' || user_profile.last_name, 'Investisseur'),
+                'amount', transaction_record.amount
+            )
         );
     END IF;
 
@@ -114,17 +113,16 @@ BEGIN
 
     -- FIXED: Use simple headers
     IF user_profile.email IS NOT NULL THEN
-        payload := jsonb_build_object(
-            'template_id', 'deposit_rejected',
-            'to', user_profile.email,
-            'name', COALESCE(user_profile.first_name || ' ' || user_profile.last_name, 'Investisseur'),
-            'amount', transaction_record.amount,
-            'reason', reason
-        );
-        PERFORM net.http_post(
-            url := project_url || '/functions/v1/send-resend-email',
-            headers := jsonb_build_object('Content-Type', 'application/json'),
-            body := payload
+        INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+        VALUES (
+            'deposit_rejected',
+            transaction_record.user_id,
+            user_profile.email,
+            jsonb_build_object(
+                'name', COALESCE(user_profile.first_name || ' ' || user_profile.last_name, 'Investisseur'),
+                'amount', transaction_record.amount,
+                'reason', reason
+            )
         );
     END IF;
 
@@ -181,16 +179,15 @@ BEGIN
 
   -- FIXED: Use simple headers
   IF user_profile.email IS NOT NULL THEN
-      payload := jsonb_build_object(
-          'template_id', 'new_investment',
-          'to', user_profile.email,
-          'name', COALESCE(user_profile.first_name || ' ' || user_profile.last_name, 'Investisseur'),
-          'amount', investment_amount
-      );
-      PERFORM net.http_post(
-          url := project_url || '/functions/v1/send-resend-email',
-          headers := jsonb_build_object('Content-Type', 'application/json'),
-          body := payload
+      INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+      VALUES (
+          'new_investment',
+          current_user_id,
+          user_profile.email,
+          jsonb_build_object(
+              'name', COALESCE(user_profile.first_name || ' ' || user_profile.last_name, 'Investisseur'),
+              'amount', investment_amount
+          )
       );
   END IF;
 

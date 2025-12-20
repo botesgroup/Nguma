@@ -60,20 +60,17 @@ BEGIN
   FROM public.transactions
   WHERE id = transaction_id_to_reject;
 
-  -- Send email to the user
   IF user_profile.email IS NOT NULL THEN
-      payload := jsonb_build_object(
-          'template_id', 'withdrawal_rejected',
-          'to', user_profile.email,
-          'name', user_profile.first_name || ' ' || user_profile.last_name,
-          'amount', target_transaction.amount,
-          'reason', reason
-      );
-
-      PERFORM net.http_post(
-          url := project_url || '/functions/v1/send-resend-email',
-          headers := jsonb_build_object('Content-Type', 'application/json'),
-          body := payload
+      INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+      VALUES (
+          'withdrawal_rejected',
+          target_transaction.user_id,
+          user_profile.email,
+          jsonb_build_object(
+              'name', user_profile.first_name || ' ' || user_profile.last_name,
+              'amount', target_transaction.amount,
+              'reason', reason
+          )
       );
   END IF;
 

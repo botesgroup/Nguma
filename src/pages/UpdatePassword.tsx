@@ -10,7 +10,10 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Eye, EyeOff } from "lucide-react";
 
+import { sendResendNotification } from "@/services/resendNotificationService"; // New import
+import { getProfile } from "@/services/profileService"; // To get user's full_name
 
 const passwordSchema = z.object({
   password: z.string()
@@ -24,8 +27,6 @@ const passwordSchema = z.object({
 });
 
 type PasswordFormValues = z.infer<typeof passwordSchema>;
-
-import { Eye, EyeOff } from "lucide-react";
 
 const UpdatePassword = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -76,11 +77,25 @@ const UpdatePassword = () => {
   const onSubmit = async (values: PasswordFormValues) => {
     setIsLoading(true);
     try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error("Utilisateur non authentifié.");
+
       const { error } = await supabase.auth.updateUser({
         password: values.password,
       });
 
       if (error) throw error;
+
+      // --- Send Password Change Notification ---
+      const profile = await getProfile(); // Fetch profile to get full_name
+      if (profile?.email) {
+        await sendResendNotification('password_changed', {
+          to: profile.email,
+          name: profile.first_name || 'Cher utilisateur',
+          date: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          userId: user.id
+        });
+      }
 
       toast({
         title: "Mot de passe mis à jour !",

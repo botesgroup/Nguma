@@ -15,6 +15,7 @@ import { invalidateSecuritySettingsCache } from '@/services/securitySettingsServ
 import { WysiwygEditor } from '@/components/WysiwygEditor';
 import { PaymentMethodsManager } from '@/components/admin/PaymentMethodsManager';
 import { FileUploadControl } from '@/components/admin/FileUploadControl'; // Added import
+import { DepositSettings } from '@/components/admin/DepositSettings'; // Added import
 
 interface Setting {
   id: string;
@@ -121,6 +122,11 @@ export const AdminSettings = () => {
       icon: CreditCard,
       description: 'Gestion des méthodes de paiement disponibles',
     },
+    deposits: {
+      label: 'Dépôts',
+      icon: CreditCard,
+      description: 'Gestion des périodes et limitations des dépôts',
+    },
   };
 
   return (
@@ -205,6 +211,26 @@ export const AdminSettings = () => {
           <AccordionContent className="px-6 pb-6">
             <div className="pt-4">
               <PaymentMethodsManager />
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Section spéciale pour les paramètres de dépôt */}
+        <AccordionItem value="deposits" className="border rounded-lg">
+          <AccordionTrigger className="px-6 hover:no-underline">
+            <div className="flex items-center gap-3">
+              <CreditCard className="h-5 w-5" />
+              <div className="text-left">
+                <div className="font-semibold">Dépôts</div>
+                <div className="text-sm text-muted-foreground">
+                  Gestion des périodes et limitations des dépôts
+                </div>
+              </div>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-6 pb-6">
+            <div className="pt-4">
+              <DepositSettings />
             </div>
           </AccordionContent>
         </AccordionItem>

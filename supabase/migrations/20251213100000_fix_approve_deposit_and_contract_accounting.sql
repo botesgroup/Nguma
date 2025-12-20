@@ -74,23 +74,18 @@ BEGIN
     -- Fetch Support Phone
     SELECT value INTO v_support_phone FROM public.settings WHERE key = 'support_whatsapp_number';
 
-    -- CRITICAL EMAIL SENDING
+    -- Enqueue email notification
     IF user_profile.email IS NOT NULL THEN
-        payload := jsonb_build_object(
-            'template_id', 'deposit_approved',
-            'to', user_profile.email,
-            'name', COALESCE(user_profile.first_name || ' ' || user_profile.last_name, 'Investisseur'),
-            'amount', transaction_record.amount,
-            'support_phone', v_support_phone
-        );
-        PERFORM net.http_post(
-            url := project_url || '/functions/v1/send-resend-email',
-            headers := jsonb_build_object(
-                'Content-Type', 'application/json', 
-                -- Safer header extraction:
-                'Authorization', 'Bearer ' || (cast(coalesce(current_setting('request.headers', true), '{}') as jsonb)->>'authorization')
-            ),
-            body := payload
+        INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+        VALUES (
+            'deposit_approved',
+            transaction_record.user_id,
+            user_profile.email,
+            jsonb_build_object(
+                'name', COALESCE(user_profile.first_name || ' ' || user_profile.last_name, 'Investisseur'),
+                'amount', transaction_record.amount,
+                'support_phone', v_support_phone
+            )
         );
     END IF;
 
@@ -171,22 +166,18 @@ BEGIN
   -- Fetch Support Phone
   SELECT value INTO v_support_phone FROM public.settings WHERE key = 'support_whatsapp_number';
 
-  -- CRITICAL EMAIL SENDING
+  -- Enqueue email notification
   IF user_profile.email IS NOT NULL THEN
-      payload := jsonb_build_object(
-          'template_id', 'new_investment',
-          'to', user_profile.email,
-          'name', COALESCE(user_profile.first_name || ' ' || user_profile.last_name, 'Investisseur'),
-          'amount', investment_amount,
-          'support_phone', v_support_phone -- Add support phone
-      );
-      PERFORM net.http_post(
-          url := project_url || '/functions/v1/send-resend-email',
-          headers := jsonb_build_object(
-            'Content-Type', 'application/json', 
-            'Authorization', 'Bearer ' || (cast(coalesce(current_setting('request.headers', true), '{}') as jsonb)->>'authorization')
-          ),
-          body := payload
+      INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+      VALUES (
+          'new_investment',
+          current_user_id,
+          user_profile.email,
+          jsonb_build_object(
+              'name', COALESCE(user_profile.first_name || ' ' || user_profile.last_name, 'Investisseur'),
+              'amount', investment_amount,
+              'support_phone', v_support_phone
+          )
       );
   END IF;
 

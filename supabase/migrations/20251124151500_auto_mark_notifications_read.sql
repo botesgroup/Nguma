@@ -84,24 +84,18 @@ BEGIN
         'medium'
     );
 
-    -- Send email to the user
+    -- Enqueue email to the user
     IF user_profile.email IS NOT NULL THEN
-        payload := jsonb_build_object(
-            'template_id', 'deposit_approved',
-            'to', user_profile.email,
-            'name', user_profile.first_name || ' ' || user_profile.last_name,
-            'amount', transaction_record.amount
+        INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+        VALUES (
+            'deposit_approved',
+            transaction_record.user_id,
+            user_profile.email,
+            jsonb_build_object(
+                'name', user_profile.first_name || ' ' || user_profile.last_name,
+                'amount', transaction_record.amount
+            )
         );
-
-        BEGIN
-            PERFORM net.http_post(
-                url := project_url || '/functions/v1/send-resend-email',
-                headers := jsonb_build_object('Content-Type', 'application/json'),
-                body := payload
-            );
-        EXCEPTION WHEN OTHERS THEN
-            RAISE WARNING 'Failed to send email notification: %', SQLERRM;
-        END;
     END IF;
 
     RETURN json_build_object('success', true);
@@ -171,23 +165,17 @@ BEGIN
     );
 
     IF user_profile.email IS NOT NULL THEN
-        payload := jsonb_build_object(
-            'template_id', 'deposit_rejected',
-            'to', user_profile.email,
-            'name', user_profile.first_name || ' ' || user_profile.last_name,
-            'amount', transaction_record.amount,
-            'reason', reason
+        INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+        VALUES (
+            'deposit_rejected',
+            transaction_record.user_id,
+            user_profile.email,
+            jsonb_build_object(
+                'name', user_profile.first_name || ' ' || user_profile.last_name,
+                'amount', transaction_record.amount,
+                'reason', reason
+            )
         );
-
-        BEGIN
-            PERFORM net.http_post(
-                url := project_url || '/functions/v1/send-resend-email',
-                headers := jsonb_build_object('Content-Type', 'application/json'),
-                body := payload
-            );
-        EXCEPTION WHEN OTHERS THEN
-            RAISE WARNING 'Failed to send email notification: %', SQLERRM;
-        END;
     END IF;
 
     RETURN json_build_object('success', true);

@@ -16,7 +16,7 @@ BEGIN
   IF NOT FOUND THEN user_currency := 'USD'; END IF;
 
   INSERT INTO public.transactions (user_id, type, amount, currency, status, method, description)
-  VALUES (current_user_id, 'deposit', deposit_amount, user_currency, 'pending', deposit_method, 'User deposit request via ' || deposit_method)
+  VALUES (auth.uid(), 'deposit', deposit_amount, user_currency, 'pending', deposit_method, 'User deposit request via ' || deposit_method)
   RETURNING id INTO new_transaction_id;
 
   PERFORM public.notify_all_admins('Nouvelle demande de dépôt de ' || deposit_amount || ' ' || user_currency, '/admin/deposits', new_transaction_id);

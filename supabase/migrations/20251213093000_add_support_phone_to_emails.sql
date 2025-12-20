@@ -60,24 +60,20 @@ BEGIN
     -- Fetch Support Phone
     SELECT value INTO v_support_phone FROM public.settings WHERE key = 'support_whatsapp_number';
 
-    -- Send deposit_pending email to user
-    payload := jsonb_build_object(
-        'template_id', 'deposit_pending',
-        'to', profile_data.email,
-        'name', profile_data.first_name || ' ' || profile_data.last_name,
-        'amount', deposit_amount,
-        'support_phone', v_support_phone -- Add support phone
-    );
-
-    PERFORM net.http_post(
-        url := project_url || '/functions/v1/send-resend-email',
-        headers := jsonb_build_object(
-            'Content-Type', 'application/json',
-            'apikey', anon_key,
-            'Authorization', 'Bearer ' || anon_key
-        ),
-        body := payload
-    );
+    -- Enqueue deposit_pending email to user
+    IF profile_data.email IS NOT NULL THEN
+        INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+        VALUES (
+            'deposit_pending',
+            v_user_id,
+            profile_data.email,
+            jsonb_build_object(
+                'name', profile_data.first_name || ' ' || profile_data.last_name,
+                'amount', deposit_amount,
+                'support_phone', v_support_phone
+            )
+        );
+    END IF;
 
     -- Aggregate all admin emails into a JSON array
     SELECT json_agg(u.email) INTO admin_emails
@@ -173,19 +169,18 @@ BEGIN
     -- Fetch Support Phone
     SELECT value INTO v_support_phone FROM public.settings WHERE key = 'support_whatsapp_number';
 
-    -- CRITICAL EMAIL SENDING
+    -- Enqueue email notification
     IF user_profile.email IS NOT NULL THEN
-        payload := jsonb_build_object(
-            'template_id', 'deposit_approved',
-            'to', user_profile.email,
-            'name', COALESCE(user_profile.first_name || ' ' || user_profile.last_name, 'Investisseur'),
-            'amount', transaction_record.amount,
-            'support_phone', v_support_phone -- Add support phone
-        );
-        PERFORM net.http_post(
-            url := project_url || '/functions/v1/send-resend-email',
-            headers := jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer ' || current_setting('request.headers')::json->>'authorization'),
-            body := payload
+        INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+        VALUES (
+            'deposit_approved',
+            transaction_record.user_id,
+            user_profile.email,
+            jsonb_build_object(
+                'name', COALESCE(user_profile.first_name || ' ' || user_profile.last_name, 'Investisseur'),
+                'amount', transaction_record.amount,
+                'support_phone', v_support_phone
+            )
         );
     END IF;
 
@@ -247,19 +242,18 @@ BEGIN
   -- Fetch Support Phone
   SELECT value INTO v_support_phone FROM public.settings WHERE key = 'support_whatsapp_number';
 
-  -- CRITICAL EMAIL SENDING
+  -- Enqueue email notification
   IF user_profile.email IS NOT NULL THEN
-      payload := jsonb_build_object(
-          'template_id', 'new_investment',
-          'to', user_profile.email,
-          'name', COALESCE(user_profile.first_name || ' ' || user_profile.last_name, 'Investisseur'),
-          'amount', investment_amount,
-          'support_phone', v_support_phone -- Add support phone
-      );
-      PERFORM net.http_post(
-          url := project_url || '/functions/v1/send-resend-email',
-          headers := jsonb_build_object('Content-Type', 'application/json', 'Authorization', 'Bearer ' || current_setting('request.headers')::json->>'authorization'),
-          body := payload
+      INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+      VALUES (
+          'new_investment',
+          current_user_id,
+          user_profile.email,
+          jsonb_build_object(
+              'name', COALESCE(user_profile.first_name || ' ' || user_profile.last_name, 'Investisseur'),
+              'amount', investment_amount,
+              'support_phone', v_support_phone
+          )
       );
   END IF;
 

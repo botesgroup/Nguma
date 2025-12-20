@@ -85,23 +85,19 @@ BEGIN
         v_user_id, v_otp_code, p_amount, p_method, p_payment_details, FALSE
     ) RETURNING id INTO v_verification_id;
 
-    payload := jsonb_build_object(
-        'template_id', 'withdrawal_otp',
-        'to', profile_data.email,
-        'name', profile_data.first_name || ' ' || profile_data.last_name,
-        'otp_code', v_otp_code,
-        'amount', p_amount
-    );
-
-    PERFORM net.http_post(
-        url := project_url || '/functions/v1/send-resend-email',
-        headers := jsonb_build_object(
-            'Content-Type', 'application/json',
-            'apikey', anon_key,
-            'Authorization', 'Bearer ' || anon_key
-        ),
-        body := payload
-    );
+    IF profile_data.email IS NOT NULL THEN
+        INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+        VALUES (
+            'withdrawal_otp',
+            v_user_id,
+            profile_data.email,
+            jsonb_build_object(
+                'name', profile_data.first_name || ' ' || profile_data.last_name,
+                'otp_code', v_otp_code,
+                'amount', p_amount
+            )
+        );
+    END IF;
 
     RETURN json_build_object(
         'success', true, 
