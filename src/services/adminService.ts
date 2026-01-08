@@ -38,6 +38,20 @@ export const getTransactionMetadata = async (transactionId: string) => {
   return data || [];
 };
 
+export const getSingleTransaction = async (transactionId: string) => {
+    const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('id', transactionId)
+        .single();
+    
+    if (error) {
+        console.error(`Error fetching transaction ${transactionId}:`, error);
+        throw new Error(`Could not fetch transaction ${transactionId}.`);
+    }
+    return data;
+}
+
 export const approveDeposit = async (transactionId: string) => {
   const { data, error } = await supabase.rpc('approve_deposit', { transaction_id_to_approve: transactionId });
   if (error) throw new Error(error.message);

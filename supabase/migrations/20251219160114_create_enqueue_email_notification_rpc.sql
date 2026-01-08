@@ -24,23 +24,39 @@ BEGIN
     END IF;
 
     -- Déterminer le destinataire principal (utilisateur ou admin en boucle)
-    IF p_template_id LIKE '%_admin' THEN
-        -- Si c'est un template admin, on boucle sur tous les admins
-        -- p_params doit contenir les détails de l'événement (qui a fait quoi)
-        FOR admin_record IN
-            SELECT u.id, u.email FROM auth.users u
-            JOIN public.user_roles ur ON u.id = ur.user_id
-            WHERE ur.role = 'admin'
-        LOOP
-            INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
-            VALUES (
-                p_template_id,
-                admin_record.id,
-                admin_record.email,
-                p_params
-            );
-        END LOOP;
-        RETURN jsonb_build_object('success', TRUE, 'message', 'Admin notifications enqueued.');
+    IF p_template_id LIKE '%_admin' OR p_template_id IN ('new_deposit_request', 'new_withdrawal_request', 'new_refund_request') THEN
+        -- Définir le type de notification pour le filtrage
+        DECLARE
+            v_notif_type TEXT := CASE 
+                WHEN p_template_id = 'new_deposit_request' THEN 'admin_deposit'
+                WHEN p_template_id = 'new_withdrawal_request' THEN 'admin_withdrawal'
+                WHEN p_template_id = 'new_user_registered_admin' THEN 'admin_user'
+                WHEN p_template_id = 'new_contract_admin' THEN 'admin_contract'
+                WHEN p_template_id = 'new_support_request_admin' THEN 'admin_support'
+                WHEN p_template_id = 'new_refund_request' THEN 'admin_refund'
+                ELSE 'system'
+            END;
+        BEGIN
+            -- Si c'est un template admin, on boucle sur tous les admins
+            FOR admin_record IN
+                SELECT u.id, u.email 
+                FROM auth.users u
+                JOIN public.user_roles ur ON u.id = ur.user_id
+                LEFT JOIN public.user_notification_preferences unp 
+                    ON u.id = unp.user_id AND unp.notification_type::text = v_notif_type
+                WHERE ur.role = 'admin'
+                AND COALESCE(unp.email_enabled, TRUE) = TRUE
+            LOOP
+                INSERT INTO public.notifications_queue (template_id, recipient_user_id, recipient_email, notification_params)
+                VALUES (
+                    p_template_id,
+                    admin_record.id,
+                    admin_record.email,
+                    p_params
+                );
+            END LOOP;
+        END;
+        RETURN jsonb_build_object('success', TRUE, 'message', 'Admin notifications enqueued (filtered by individual preferences).');
     ELSE
         -- Pour les notifications utilisateur, le user_id est l'utilisateur courant
         v_recipient_user_id := v_user_id;

@@ -1,32 +1,31 @@
--- Fix: Add reference_id to notify_all_admins to enable auto-marking as read
--- This migration updates notify_all_admins and the functions that call it
+-- Migration to update email sending functions to use the notifications_queue system
 
--- 1. Update notify_all_admins to accept reference_id
-CREATE OR REPLACE FUNCTION public.notify_all_admins(
-  message_text TEXT, 
-  link TEXT DEFAULT NULL,
-  notification_type TEXT DEFAULT 'admin',
-  notification_priority TEXT DEFAULT 'medium',
-  ref_id UUID DEFAULT NULL
-)
-RETURNS void
+-- 1. Create or replace the public.get_secret function for secure secret access from SQL
+-- This function is crucial for securely retrieving secrets (like service role key)
+-- without hardcoding them in SQL functions.
+CREATE OR REPLACE FUNCTION public.get_secret(secret_name TEXT)
+RETURNS TEXT
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  admin_record RECORD;
+    secret_value TEXT;
 BEGIN
-  FOR admin_record IN 
-    SELECT user_id FROM public.user_roles WHERE role = 'admin'
-  LOOP
-    INSERT INTO public.notifications (user_id, message, link_to, type, priority, reference_id)
-    VALUES (admin_record.user_id, message_text, link, notification_type, notification_priority, ref_id);
-  END LOOP;
+    SELECT value INTO secret_value
+    FROM vault.decrypted_secrets
+    WHERE name = secret_name;
+
+    RETURN secret_value;
 END;
 $$;
+GRANT EXECUTE ON FUNCTION public.get_secret(TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_secret(TEXT) TO service_role;
 
--- 2. Update request_deposit to pass transaction_id
-CREATE OR REPLACE FUNCTION public.request_deposit(
+-- 2. Drop the old function "request_deposit" to allow changing its return type
+DROP FUNCTION IF EXISTS public.request_deposit(numeric,text,text,text,text);
+
+-- 3. Recreate the "request_deposit" function with the new queue-based logic
+CREATE FUNCTION public.request_deposit(
     deposit_amount numeric,
     deposit_method text,
     p_payment_reference text DEFAULT NULL::text,
@@ -43,7 +42,6 @@ DECLARE
     v_transaction_id UUID;
     profile_data record;
     admin_record record;
-    payload JSONB;
 BEGIN
     v_user_id := auth.uid();
     IF v_user_id IS NULL THEN
@@ -87,9 +85,6 @@ BEGIN
         )
     );
 
-    -- Rate limiting: Wait 1 second before next email
-    PERFORM pg_sleep(1.0);
-
     -- Enqueue notification to all admins
     FOR admin_record IN
         SELECT u.id as admin_id, u.email as admin_email FROM auth.users u
@@ -115,7 +110,7 @@ BEGIN
         '/admin/deposits', 
         'admin', 
         'high',
-        v_transaction_id -- Pass transaction ID here
+        v_transaction_id
     );
     
     RETURN json_build_object(
@@ -129,8 +124,11 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $function$;
 
--- 3. Update user_withdraw to pass transaction_id
-CREATE OR REPLACE FUNCTION public.user_withdraw(
+-- 4. Drop the old function "user_withdraw"
+DROP FUNCTION IF EXISTS public.user_withdraw(numeric, text, jsonb, jsonb);
+
+-- 5. Recreate the "user_withdraw" function with the new queue-based logic
+CREATE FUNCTION public.user_withdraw(
     withdraw_amount numeric, 
     withdraw_method text, 
     crypto_details jsonb DEFAULT NULL::jsonb, 
@@ -145,7 +143,6 @@ DECLARE
     new_transaction_id uuid;
     user_profile record;
     admin_record record;
-    payload JSONB;
 BEGIN
     -- Get user wallet
     SELECT * INTO user_wallet FROM public.wallets WHERE user_id = auth.uid();

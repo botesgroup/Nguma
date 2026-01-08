@@ -50,6 +50,36 @@ export const NotificationPreferences = ({ userId }: NotificationPreferencesProps
       id: 'system',
       label: 'Système',
       description: 'Notifications système importantes'
+    },
+    {
+      id: 'admin_deposit',
+      label: 'ADMIN : Nouveaux Dépôts',
+      description: 'Alertes sur les nouvelles demandes de dépôt des utilisateurs'
+    },
+    {
+      id: 'admin_withdrawal',
+      label: 'ADMIN : Nouveaux Retraits',
+      description: 'Alertes sur les nouvelles demandes de retrait à traiter'
+    },
+    {
+      id: 'admin_user',
+      label: 'ADMIN : Nouvelles Inscriptions',
+      description: 'Notifications lors de l\'inscription de nouveaux utilisateurs'
+    },
+    {
+      id: 'admin_contract',
+      label: 'ADMIN : Nouveaux Contrats',
+      description: 'Alertes lors de la création de nouveaux contrats d\'investissement'
+    },
+    {
+      id: 'admin_support',
+      label: 'ADMIN : Support Client',
+      description: 'Notifications pour les nouveaux tickets de support'
+    },
+    {
+      id: 'admin_refund',
+      label: 'ADMIN : Remboursements',
+      description: 'Alertes pour les nouvelles demandes de remboursement'
     }
   ];
 
@@ -83,22 +113,22 @@ export const NotificationPreferences = ({ userId }: NotificationPreferencesProps
 
     try {
       setLoading(true);
-      
+
       const result = await toggleNotificationPreference(userId, type, channel);
       if (result.success) {
         // Mettre à jour localement l'état
         setPreferences(prev => {
           if (!prev) return null;
-          
+
           const updated = { ...prev };
           updated[type] = {
             ...updated[type],
             [channel]: !updated[type][channel]
           };
-          
+
           return updated;
         });
-        
+
         toast({
           title: 'Préférences mises à jour',
           description: 'Vos préférences de notification ont été enregistrées.'
@@ -149,7 +179,7 @@ export const NotificationPreferences = ({ userId }: NotificationPreferencesProps
               <h3 className="font-medium">{type.label}</h3>
               <p className="text-sm text-muted-foreground">{type.description}</p>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
@@ -162,7 +192,7 @@ export const NotificationPreferences = ({ userId }: NotificationPreferencesProps
                   disabled={loading}
                 />
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Push</Label>
@@ -174,7 +204,7 @@ export const NotificationPreferences = ({ userId }: NotificationPreferencesProps
                   disabled={loading}
                 />
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Interne</Label>

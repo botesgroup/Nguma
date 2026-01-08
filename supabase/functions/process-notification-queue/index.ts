@@ -1,5 +1,6 @@
 // supabase/functions/process-notification-queue/index.ts
 
+// Force redeploy v2
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 
@@ -59,6 +60,9 @@ Deno.serve(async (req) => {
         // Invoke the email sending function
         const { error: invokeError } = await supabaseAdmin.functions.invoke('send-resend-email', {
           body: payload,
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+          }
         });
 
         if (invokeError) {

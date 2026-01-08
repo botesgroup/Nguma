@@ -1,4 +1,4 @@
-
+// Remove the debug component from the PendingDepositsPage
 import { PendingDeposits } from "@/components/admin/PendingDeposits";
 import { useQuery } from "@tanstack/react-query";
 import { getPendingDeposits } from "@/services/adminService";

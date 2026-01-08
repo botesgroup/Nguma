@@ -5,14 +5,20 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-export type NotificationType = 
-  | 'deposit' 
-  | 'withdrawal' 
-  | 'contract' 
-  | 'profit' 
+export type NotificationType =
+  | 'deposit'
+  | 'withdrawal'
+  | 'contract'
+  | 'profit'
   | 'security'
   | 'system'
-  | 'deposit_availability_reminder'; // New type
+  | 'deposit_availability_reminder'
+  | 'admin_deposit'
+  | 'admin_withdrawal'
+  | 'admin_user'
+  | 'admin_contract'
+  | 'admin_support'
+  | 'admin_refund';
 
 export interface NotificationPreferences {
   deposit: {
@@ -46,6 +52,36 @@ export interface NotificationPreferences {
     internal: boolean;
   };
   deposit_availability_reminder: { // New default preference
+    email: boolean;
+    push: boolean;
+    internal: boolean;
+  };
+  admin_deposit: {
+    email: boolean;
+    push: boolean;
+    internal: boolean;
+  };
+  admin_withdrawal: {
+    email: boolean;
+    push: boolean;
+    internal: boolean;
+  };
+  admin_user: {
+    email: boolean;
+    push: boolean;
+    internal: boolean;
+  };
+  admin_contract: {
+    email: boolean;
+    push: boolean;
+    internal: boolean;
+  };
+  admin_support: {
+    email: boolean;
+    push: boolean;
+    internal: boolean;
+  };
+  admin_refund: {
     email: boolean;
     push: boolean;
     internal: boolean;
@@ -88,6 +124,36 @@ export const DEFAULT_PREFERENCES: NotificationPreferences = {
     email: true,
     push: false, // Default to false for push for this type
     internal: false // Default to false for internal for this type
+  },
+  admin_deposit: {
+    email: true,
+    push: false,
+    internal: true
+  },
+  admin_withdrawal: {
+    email: true,
+    push: false,
+    internal: true
+  },
+  admin_user: {
+    email: true,
+    push: false,
+    internal: true
+  },
+  admin_contract: {
+    email: true,
+    push: false,
+    internal: true
+  },
+  admin_support: {
+    email: true,
+    push: false,
+    internal: true
+  },
+  admin_refund: {
+    email: true,
+    push: false,
+    internal: true
   }
 };
 
@@ -119,7 +185,7 @@ export const getUserNotificationPreferences = async (
 
     // Convertir les préférences brutes en objet structuré
     const preferences: Partial<NotificationPreferences> = {};
-    
+
     data.forEach(pref => {
       const type = pref.notification_type as NotificationType;
       if (type in DEFAULT_PREFERENCES) {
@@ -130,7 +196,7 @@ export const getUserNotificationPreferences = async (
         };
       }
     });
-    
+
     // Fusionner avec les valeurs par défaut pour s'assurer que tous les types sont présents
     const mergedPreferences = { ...DEFAULT_PREFERENCES, ...preferences };
     console.log('DEBUG: Merged preferences:', mergedPreferences);
@@ -165,7 +231,7 @@ export const updateUserNotificationPreferences = async (
     if (upsertData.length === 0) {
       return { success: true };
     }
-    
+
     console.log('DEBUG: Data for upsert:', upsertData);
 
     // Utiliser upsert pour insérer ou mettre à jour en se basant sur la contrainte unique
@@ -228,7 +294,7 @@ export const toggleNotificationPreference = async (
   try {
     const currentPreferences = await getUserNotificationPreferences(userId);
     const currentValue = currentPreferences[type][channel];
-    
+
     // Mettre à jour seulement ce canal spécifique
     const newPreferences = { ...currentPreferences };
     newPreferences[type][channel] = !currentValue;
@@ -280,7 +346,7 @@ export const subscribeToNotification = async (
 
     // 1. Récupérer l'état actuel des préférences (sans effets de bord)
     const currentPreferences = await getUserNotificationPreferences(currentUserId);
-    
+
     // 2. Créer un nouvel objet de préférences avec la modification souhaitée
     const newPreferences: Partial<NotificationPreferences> = {
       ...currentPreferences,

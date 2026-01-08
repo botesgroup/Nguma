@@ -125,7 +125,7 @@ const renderNewWithdrawalRequest = (params: EmailParams, helpers: TemplateHelper
   const previewText = `${userName || email} demande un retrait de ${formatCurrency(amount)}`;
 
   const content = `
-    ${StatusBadge('warning', 'Nouveau Retrait')}
+    ${StatusBadge('info', 'Nouveau Retrait')}
     <h2>Nouvelle Demande de Retrait</h2>
     <p style="font-size: 16px; line-height: 1.5; color: #4B5563;">
       Un utilisateur a soumis une nouvelle demande de retrait nécessitant validation et upload de preuve de transfert.
@@ -146,7 +146,7 @@ const renderNewWithdrawalRequest = (params: EmailParams, helpers: TemplateHelper
         <tr><td>Réf. Transaction :</td><td><code>${escapeHtml(transactionId || 'N/A')}</code></td></tr>
         <tr><td>Date :</td><td>${formatDate()}</td></tr>
       </table>
-    `, 'warning')}
+    `, 'info')}
     
     <p style="font-size: 14px; color: #EF4444; font-weight: 600;">
       ⚠️ Rappel : Upload de la preuve de transfert obligatoire lors de l'approbation

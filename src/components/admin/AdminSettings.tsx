@@ -16,6 +16,8 @@ import { WysiwygEditor } from '@/components/WysiwygEditor';
 import { PaymentMethodsManager } from '@/components/admin/PaymentMethodsManager';
 import { FileUploadControl } from '@/components/admin/FileUploadControl'; // Added import
 import { DepositSettings } from '@/components/admin/DepositSettings'; // Added import
+import { NotificationPreferences } from '@/components/notifications/NotificationPreferences';
+import { Bell } from 'lucide-react';
 
 interface Setting {
   id: string;
@@ -31,6 +33,15 @@ interface Setting {
 export const AdminSettings = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [currentUserId, setCurrentUserId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setCurrentUserId(data.user.id);
+      }
+    });
+  }, []);
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['settings'],
@@ -162,13 +173,12 @@ export const AdminSettings = () => {
                   {regularSettings.length > 0 && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {regularSettings.map((setting) => (
-                        <SettingControl
-                          key={setting.id}
-                          setting={setting}
-                          onSave={handleSave}
-                          isLoading={updateMutation.isPending}
-                        />
-                      ))}
+                                                  <SettingControl
+                                                    key={setting.id}
+                                                    setting={{ ...setting, type: setting.key === 'withdrawal_otp_enabled' ? 'boolean' : setting.type }}
+                                                    onSave={handleSave}
+                                                    isLoading={updateMutation.isPending}
+                                                  />                      ))}
                     </div>
                   )}
 
@@ -234,6 +244,28 @@ export const AdminSettings = () => {
             </div>
           </AccordionContent>
         </AccordionItem>
+
+        {/* Section pour les notifications personnelles de l'admin */}
+        {currentUserId && (
+          <AccordionItem value="personal_notifications" className="border rounded-lg">
+            <AccordionTrigger className="px-6 hover:no-underline">
+              <div className="flex items-center gap-3">
+                <Bell className="h-5 w-5" />
+                <div className="text-left">
+                  <div className="font-semibold">Mes Notifications</div>
+                  <div className="text-sm text-muted-foreground">
+                    Gérez vos propres alertes (Email, Push, In-App)
+                  </div>
+                </div>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6">
+              <div className="pt-4">
+                <NotificationPreferences userId={currentUserId} />
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        )}
       </Accordion>
     </div>
   );

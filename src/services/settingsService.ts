@@ -64,6 +64,15 @@ export const updateSetting = async ({ key, value }: { key: string; value: string
 };
 
 /**
+ * Updates the 'withdrawal_otp_enabled' setting.
+ * @param enabled Whether OTP verification should be enabled (true) or disabled (false).
+ * @returns {Promise<any>} The result of the update operation.
+ */
+export const updateWithdrawalOtpSetting = async (enabled: boolean) => {
+  return updateSetting({ key: 'withdrawal_otp_enabled', value: enabled.toString() });
+};
+
+/**
  * Uploads a generic contract PDF to Supabase Storage and updates the setting.
  * @param file The PDF file to upload.
  * @returns {Promise<string>} The public URL of the uploaded PDF.
