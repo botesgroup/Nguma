@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/utils";
-import { Loader2, Search, Eye, Filter, ArrowLeft, ArrowRight, ArrowDownCircle, ArrowUpCircle, RotateCcw, XCircle } from "lucide-react";
+import { Loader2, Search, Eye, Filter, ArrowLeft, ArrowRight, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, RotateCcw, XCircle } from "lucide-react";
 import { format, subDays, startOfWeek, startOfMonth, endOfDay, startOfDay } from "date-fns";
 
 const AdminTransactionsPage = () => {
@@ -19,6 +19,7 @@ const AdminTransactionsPage = () => {
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
     const [datePreset, setDatePreset] = useState("all");
+    const [kpiPeriod, setKpiPeriod] = useState<"week" | "month" | "custom">("month");
     const [page, setPage] = useState(1);
     const pageSize = 10;
 
@@ -31,8 +32,8 @@ const AdminTransactionsPage = () => {
     });
 
     const { data: kpis, isLoading: isLoadingKPIs } = useQuery({
-        queryKey: ["adminTransactionKPIs", searchQuery, typeFilter, dateFrom, dateTo],
-        queryFn: () => getTransactionKPIs(searchQuery, typeFilter, dateFrom, dateTo),
+        queryKey: ["adminTransactionKPIs", dateFrom, dateTo],
+        queryFn: () => getTransactionKPIs(dateFrom, dateTo),
     });
 
     const transactions = (data as any)?.data || [];
@@ -112,8 +113,42 @@ const AdminTransactionsPage = () => {
                 <p className="text-muted-foreground">Consultez l'historique complet des dépôts, retraits et profits.</p>
             </div>
 
+            {/* KPI Period Selector */}
+            <div className="flex items-center gap-4 mb-4">
+                <label className="text-sm font-medium">Période des KPIs:</label>
+                <Select value={kpiPeriod} onValueChange={(v: "week" | "month" | "custom") => setKpiPeriod(v)}>
+                    <SelectTrigger className="w-[200px]">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="week">Cette semaine</SelectItem>
+                        <SelectItem value="month">Ce mois</SelectItem>
+                        <SelectItem value="custom">Personnalisée</SelectItem>
+                    </SelectContent>
+                </Select>
+                {kpiPeriod === "custom" && (
+                    <div className="flex items-center gap-2">
+                        <Input
+                            type="date"
+                            value={dateFrom}
+                            onChange={(e) => setDateFrom(e.target.value)}
+                            className="w-[150px]"
+                            placeholder="Date début"
+                        />
+                        <span>-</span>
+                        <Input
+                            type="date"
+                            value={dateTo}
+                            onChange={(e) => setDateTo(e.target.value)}
+                            className="w-[150px]"
+                            placeholder="Date fin"
+                        />
+                    </div>
+                )}
+            </div>
+
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -123,7 +158,7 @@ const AdminTransactionsPage = () => {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">
-                            {isLoadingKPIs ? "..." : formatCurrency(kpis?.period?.deposits || 0)}
+                            {isLoadingKPIs ? "..." : formatCurrency(kpis?.[kpiPeriod]?.deposits || 0)}
                         </div>
                     </CardContent>
                 </Card>
@@ -137,7 +172,21 @@ const AdminTransactionsPage = () => {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">
-                            {isLoadingKPIs ? "..." : formatCurrency(kpis?.period?.withdrawals || 0)}
+                            {isLoadingKPIs ? "..." : formatCurrency(kpis?.[kpiPeriod]?.withdrawals || 0)}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                            <ArrowLeftRight className="h-4 w-4 text-purple-500" />
+                            Total Transferts (Période)
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">
+                            {isLoadingKPIs ? "..." : formatCurrency(kpis?.[kpiPeriod]?.transfers || 0)}
                         </div>
                     </CardContent>
                 </Card>

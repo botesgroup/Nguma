@@ -35,6 +35,12 @@ export type NotificationTemplate =
   | 'new_refund_request'
   | 'refund_approved'
   | 'refund_rejected'
+  | 'refund_rejected'
+  | 'profit_transfer_confirmed'
+  | 'new_profit_transfer_admin'
+  | 'new_user_registered_admin'
+  | 'profit_distribution_summary_admin'
+  | 'daily_payment_forecast_admin'
   | 'deposit_availability_reminder';
 
 export interface NotificationParams {

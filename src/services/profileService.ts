@@ -69,7 +69,8 @@ export const getProfile = async (): Promise<Profile | null> => {
       throw new Error("Could not create new user profile.");
     }
 
-    // Si l'insertion réussit, envoyer l'e-mail de bienvenue
+    // [DISABLED] Si l'insertion réussit, envoyer l'e-mail de bienvenue
+    /*
     if (insertedProfile) {
       try {
         await sendEmailNotification({
@@ -83,6 +84,7 @@ export const getProfile = async (): Promise<Profile | null> => {
         // Do not throw, email is a non-critical side effect
       }
     }
+    */
 
     return insertedProfile;
   }

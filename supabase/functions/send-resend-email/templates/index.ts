@@ -4,6 +4,7 @@ import { EmailTemplate, TemplateHelpers } from './types.ts';
 import { depositApprovedTemplate, depositRejectedTemplate, depositPendingTemplate } from './categories/transactions/deposit.ts';
 import { withdrawalApprovedTemplate, withdrawalRejectedTemplate, withdrawalPendingTemplate, withdrawalApprovedWithProofTemplate } from './categories/transactions/withdrawal.ts';
 import { monthlyProfitTemplate, newInvestmentTemplate, contractEndedTemplate, reinvestmentConfirmedTemplate, contractExpiringSoonTemplate } from './categories/transactions/investments.ts';
+import { profitTransferConfirmedTemplate, newProfitTransferAdminTemplate } from './categories/transactions/transfer.ts';
 
 // Import security templates
 import { securityAlertTemplate } from './categories/security/securityAlert.ts';
@@ -23,6 +24,9 @@ import {
 } from './categories/admin/admin.ts';
 
 import { newContractAdminTemplate } from './categories/admin/newContractAdmin.ts';
+import { newUserRegisteredAdminTemplate } from './categories/admin/newRegistrationAdmin.ts';
+import { profitDistributionSummaryAdminTemplate } from './categories/admin/profitDistributionSummary.ts';
+import { dailyPaymentForecastAdminTemplate } from './categories/admin/paymentForecast.ts';
 
 // Import marketing & system templates
 import {
@@ -59,6 +63,7 @@ export const TEMPLATES: Record<string, EmailTemplate> = {
   reinvestment_confirmed: reinvestmentConfirmedTemplate,
   contract_ended: contractEndedTemplate,
   contract_expiring_soon: contractExpiringSoonTemplate,
+  profit_transfer_confirmed: profitTransferConfirmedTemplate,
 
   // Security Templates
   security_alert: securityAlertTemplate,
@@ -84,6 +89,10 @@ export const TEMPLATES: Record<string, EmailTemplate> = {
   account_reactivated: accountReactivatedTemplate,
 
   new_contract_admin: newContractAdminTemplate,               // ✅ NOUVEAU - Notification admin nouveau contrat
+  new_profit_transfer_admin: newProfitTransferAdminTemplate,   // ✅ NOUVEAU - Notification admin capitalisation
+  new_user_registered_admin: newUserRegisteredAdminTemplate,   // ✅ RÉACTIVÉ - Notification admin inscription
+  profit_distribution_summary_admin: profitDistributionSummaryAdminTemplate, // ✅ NOUVEAU - Rapport admin profits
+  daily_payment_forecast_admin: dailyPaymentForecastAdminTemplate, // ✅ NOUVEAU - Prévision quotidienne paiements
 
   // Marketing & System Templates
   welcome_new_user: welcomeNewUserTemplate,

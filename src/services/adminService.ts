@@ -441,14 +441,10 @@ export const getAdminTransactionHistory = async (
 };
 
 export const getTransactionKPIs = async (
-  searchQuery: string = '',
-  typeFilter: string = 'all',
   dateFrom: string = '',
   dateTo: string = ''
 ) => {
   const { data, error } = await supabase.rpc('get_transaction_kpis' as any, {
-    p_search_query: searchQuery || null,
-    p_type_filter: typeFilter || 'all',
     p_date_from: dateFrom || null,
     p_date_to: dateTo || null
   });
@@ -457,10 +453,10 @@ export const getTransactionKPIs = async (
     throw new Error("Could not fetch transaction KPIs.");
   }
   return data as {
-    today: { deposits: number; withdrawals: number };
-    week: { deposits: number; withdrawals: number };
-    month: { deposits: number; withdrawals: number };
-    period: { deposits: number; withdrawals: number };
+    today: { deposits: number; withdrawals: number; transfers: number };
+    week: { deposits: number; withdrawals: number; transfers: number };
+    month: { deposits: number; withdrawals: number; transfers: number };
+    period: { deposits: number; withdrawals: number; transfers: number };
   };
 };
 
