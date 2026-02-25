@@ -57,9 +57,15 @@ const renderDepositRejected = (params: EmailParams, helpers: TemplateHelpers): T
       </p>
       
       ${InfoCard(`
-        <table class="info-table">
-          <tr><td>Montant :</td><td>${formatCurrency(amount)}</td></tr>
-          <tr><td>Motif :</td><td class="rejection-reason">${escapeHtml(reason || "Vérification incomplète")}</td></tr>
+        <table class="info-table" style="width: 100%; table-layout: fixed;">
+          <tr>
+            <td style="width: 35%; vertical-align: top;">Montant :</td>
+            <td style="width: 65%; vertical-align: top;">${formatCurrency(amount)}</td>
+          </tr>
+          <tr>
+            <td style="width: 35%; vertical-align: top;">Motif :</td>
+            <td style="width: 65%; vertical-align: top; word-wrap: break-word;" class="rejection-reason">${escapeHtml(reason || "Vérification incomplète")}</td>
+          </tr>
         </table>
       `, 'error')}
       
@@ -82,22 +88,26 @@ const renderDepositPending = (params: EmailParams, helpers: TemplateHelpers): Te
     const { formatCurrency, siteUrl } = helpers;
     const { name, amount } = params;
 
-    const subject = `Réception de votre demande`;
+    const subject = `Réception de votre demande de dépôt`;
     const previewText = `Votre demande de ${formatCurrency(amount)} est en cours d'analyse.`;
     
     const content = `
       ${StatusBadge('info', 'En cours de traitement')}
       <h2>Demande reçue</h2>
       <p class="lead" style="font-size: 16px; line-height: 1.5; color: #4B5563;">
-        Nous avons bien reçu les détails de votre transaction. Nos services procèdent actuellement aux vérifications d'usage.
+        Nous avons bien reçu votre demande de dépôt. Nos services procèdent actuellement à la vérification de la transaction.
       </p>
       
       ${InfoCard(`
         <table class="info-table">
           <tr><td>Montant :</td><td class="amount-highlight">${formatCurrency(amount)}</td></tr>
-          <tr><td>Délai estimé :</td><td>24h ouvrées</td></tr>
+          <tr><td>Délai de traitement :</td><td>Jusqu'à 5 jours ouvrables</td></tr>
         </table>
       `)}
+      
+      <p style="font-size: 14px; color: #6B7280; margin-top: 20px;">
+        Vous recevrez une notification de confirmation dès que les fonds seront crédités sur votre compte.
+      </p>
     `;
 
     const html = BaseLayout(content, previewText, siteUrl);

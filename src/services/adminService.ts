@@ -332,15 +332,9 @@ export const getPendingWithdrawals = async () => {
 };
 
 export const approveWithdrawal = async (transactionId: string, proofUrl: string) => {
-  const internalSecret = import.meta.env.VITE_INTERNAL_FUNCTION_SECRET;
-  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
-  if (!internalSecret || !adminEmail) throw new Error("Client-side secrets are not configured.");
-
   const { data, error } = await supabase.rpc('approve_withdrawal', {
     transaction_id_to_approve: transactionId,
-    p_proof_url: proofUrl,
-    p_internal_secret: internalSecret,
-    p_admin_email: adminEmail
+    p_proof_url: proofUrl
   });
   if (error) throw new Error(error.message);
 
@@ -350,15 +344,9 @@ export const approveWithdrawal = async (transactionId: string, proofUrl: string)
 };
 
 export const rejectWithdrawal = async (transactionId: string, reason: string) => {
-  const internalSecret = import.meta.env.VITE_INTERNAL_FUNCTION_SECRET;
-  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
-  if (!internalSecret || !adminEmail) throw new Error("Client-side secrets are not configured.");
-
   const { data, error } = await supabase.rpc('reject_withdrawal', {
     transaction_id_to_reject: transactionId,
-    reason: reason,
-    p_internal_secret: internalSecret,
-    p_admin_email: adminEmail
+    reason: reason
   });
   if (error) throw new Error(error.message);
 

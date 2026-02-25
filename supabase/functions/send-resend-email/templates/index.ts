@@ -23,6 +23,8 @@ import {
   accountReactivatedTemplate
 } from './categories/admin/admin.ts';
 
+import { adminActionLogTemplate } from './categories/admin/adminActionLog.ts';
+
 import { newContractAdminTemplate } from './categories/admin/newContractAdmin.ts';
 import { newUserRegisteredAdminTemplate } from './categories/admin/newRegistrationAdmin.ts';
 import { profitDistributionSummaryAdminTemplate } from './categories/admin/profitDistributionSummary.ts';
@@ -87,6 +89,7 @@ export const TEMPLATES: Record<string, EmailTemplate> = {
   new_withdrawal_request: newWithdrawalRequestTemplate,
   account_suspended: accountSuspendedTemplate,
   account_reactivated: accountReactivatedTemplate,
+  admin_action_log: adminActionLogTemplate, // ✅ Nouveau template de log admin
 
   new_contract_admin: newContractAdminTemplate,               // ✅ NOUVEAU - Notification admin nouveau contrat
   new_profit_transfer_admin: newProfitTransferAdminTemplate,   // ✅ NOUVEAU - Notification admin capitalisation

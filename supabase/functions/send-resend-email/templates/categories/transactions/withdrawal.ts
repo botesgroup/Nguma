@@ -41,14 +41,19 @@ const renderWithdrawalRejected = (params: EmailParams, helpers: TemplateHelpers)
 
   const content = `
     ${StatusBadge('error', 'Transfert annulé')}
-    <h2>Action requise</h2>
     <p class="lead" style="font-size: 16px; line-height: 1.5; color: #4B5563;">
       Votre demande de retrait n'a pas pu être finalisée. Aucun montant n'a été débité de votre solde.
     </p>
     ${InfoCard(`
-      <table class="info-table">
-        <tr><td>Montant :</td><td>${formatCurrency(amount)}</td></tr>
-        <tr><td>Raison :</td><td class="rejection-reason">${escapeHtml(reason || "Données incorrectes")}</td></tr>
+      <table class="info-table" style="width: 100%; table-layout: fixed;">
+        <tr>
+          <td style="width: 35%; vertical-align: top;">Montant :</td>
+          <td style="width: 65%; vertical-align: top;" class="amount-success">${formatCurrency(amount)}</td>
+        </tr>
+        <tr>
+          <td style="width: 35%; vertical-align: top;">Raison :</td>
+          <td style="width: 65%; vertical-align: top; word-wrap: break-word;" class="rejection-reason">${escapeHtml(reason || "Données incorrectes")}</td>
+        </tr>
       </table>
     `, 'error')}
   `;
@@ -71,15 +76,25 @@ const renderWithdrawalPending = (params: EmailParams, helpers: TemplateHelpers):
   const content = `
     ${StatusBadge('info', 'Vérification en cours')}
     <h2>Demande enregistrée</h2>
-    <p class="lead" style="font-size: 16px; line-height: 1.5; color: #4B5563;">
-      Vous avez initié une demande de retrait. Pour votre sécurité, notre équipe va valider cette opération manuellement.
+    <p style="font-size: 15px; line-height: 1.6; color: #374151;">
+      Nous traitons toutes les demandes de retrait dans un délai de <strong>5 jours ouvrables</strong>. Toutefois, ce délai peut être légèrement prolongé en fonction de l’affluence. Vous serez informé(e) dès que le processus sera finalisé.
     </p>
+
     ${InfoCard(`
       <table class="info-table">
-        <tr><td>Montant demandé :</td><td class="amount-highlight">${formatCurrency(amount)}</td></tr>
-        <tr><td>Délai :</td><td>24-48h</td></tr>
+        <tr><td>Montant :</td><td class="amount-highlight">${formatCurrency(amount)}</td></tr>
+        <tr><td>Délai standard :</td><td>5 jours ouvrables</td></tr>
       </table>
     `)}
+
+    <p style="font-size: 14px; line-height: 1.6; color: #6B7280; margin-top: 20px;">
+      Si, après 5 jours ouvrables, le retrait n’est toujours pas validé, la demande sera automatiquement annulée. Nous vous inviterons alors à effectuer une nouvelle demande via un autre moyen de paiement pour accélérer le traitement.
+    </p>
+
+    <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #E5E7EB;">
+      <p style="font-size: 14px; font-weight: 600; color: #1F2937; margin-bottom: 8px;">Besoin d’aide ?</p>
+      <p style="font-size: 13px; color: #4B5563;">Notre équipe d’assistance est disponible 24h/24 et 7j/7 via le chat en ligne ou notre support.</p>
+    </div>
   `;
   const html = BaseLayout(content, previewText, siteUrl);
   return {
@@ -106,11 +121,23 @@ const renderWithdrawalApprovedWithProof = (params: EmailParams, helpers: Templat
     
     ${InfoCard(`
       <h3 style="margin-top:0;">📋 Détails du Transfert</h3>
-      <table class="info-table">
-        <tr><td>Méthode :</td><td><strong>${escapeHtml(method || 'N/A')}</strong></td></tr>
-        <tr><td>Montant net :</td><td class="amount-success">${formatCurrency(amount)}</td></tr>
-        <tr><td>Date :</td><td>${date || formatDate()}</td></tr>
-        <tr><td>Statut :</td><td style="color:#059669;">✓ Envoyé</td></tr>
+      <table class="info-table" style="width: 100%; table-layout: fixed;">
+        <tr>
+          <td style="width: 35%; vertical-align: top;">Méthode :</td>
+          <td style="width: 65%; vertical-align: top;"><strong>${escapeHtml(method || 'N/A')}</strong></td>
+        </tr>
+        <tr>
+          <td style="width: 35%; vertical-align: top;">Montant net :</td>
+          <td style="width: 65%; vertical-align: top;" class="amount-success">${formatCurrency(amount)}</td>
+        </tr>
+        <tr>
+          <td style="width: 35%; vertical-align: top;">Date :</td>
+          <td style="width: 65%; vertical-align: top;">${date || formatDate()}</td>
+        </tr>
+        <tr>
+          <td style="width: 35%; vertical-align: top;">Statut :</td>
+          <td style="width: 65%; vertical-align: top; color:#059669;">✓ Envoyé</td>
+        </tr>
       </table>
     `, 'success')}
 

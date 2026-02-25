@@ -25,7 +25,7 @@ const renderRefundRequested = (params: EmailParams, helpers: TemplateHelpers): T
       </table>
     `, 'info')}
 
-    <p>Votre demande est en cours d'examen par notre équipe administrative. Vous serez notifié dès qu'une décision sera prise (généralement sous 24-48h).</p>
+    <p>Votre demande est en cours d'examen. Vous recevrez une notification de décision sous un délai de 5 jours ouvrables.</p>
     
     <div class="cta-buttons">
       <a href="${siteUrl}/contracts" class="btn btn-primary">Voir mes contrats</a>

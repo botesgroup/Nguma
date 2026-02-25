@@ -170,22 +170,22 @@ const renderAccountSuspended = (params: EmailParams, helpers: TemplateHelpers): 
   const { name, reason, date } = params;
 
   const subject = `Alerte : Votre compte a été suspendu`;
-  const previewText = `L'accès à votre compte Nguma a été temporairement restreint.`;
+  const previewText = `L'accès à votre compte Nguma a été révoqué.`;
 
   const content = `
     ${StatusBadge('error', 'Compte Suspendu')}
-    <h2>Votre accès a été restreint</h2>
+    <h2 style="color: #DC2626; font-size: 24px; text-align: center; margin-bottom: 20px;">VOTRE COMPTE A ÉTÉ BANNI DÉFINITIVEMENT</h2>
     <p class="lead" style="font-size: 16px; line-height: 1.5; color: #4B5563;">
-      Pour des raisons de sécurité et/ou de conformité, l'accès à votre compte a été temporairement suspendu par nos administrateurs.
+      Suite à la violation de nos règles et conditions générales d'utilisation, l'accès à votre compte Nguma a été révoqué.
     </p>
     ${InfoCard(`
       <table class="info-table">
-        <tr><td>Statut du compte :</td><td><strong>Suspendu</strong></td></tr>
-        <tr><td>Raison :</td><td>${escapeHtml(reason || 'Vérification de sécurité requise')}</td></tr>
+        <tr><td>Statut du compte :</td><td><strong>Banni</strong></td></tr>
+        <tr><td>Raison :</td><td>${escapeHtml(reason || 'Violation des règles')}</td></tr>
         <tr><td>Date :</td><td>${escapeHtml(date || formatDate())}</td></tr>
       </table>
     `, 'error')}
-    <p>Vous ne pourrez pas vous connecter ni accéder aux fonctionnalités de la plateforme pendant cette période. Veuillez contacter le support pour plus d'informations.</p>
+    <p>Vous ne pourrez plus vous connecter ni accéder aux fonctionnalités de la plateforme. Veuillez contacter le support pour toute question relative à cette décision.</p>
     <div class="cta-buttons">
       <a href="${siteUrl}/support" class="btn btn-primary">Contacter le support</a>
     </div>
@@ -194,7 +194,7 @@ const renderAccountSuspended = (params: EmailParams, helpers: TemplateHelpers): 
   return {
     subject,
     previewText,
-    text: `Bonjour ${name}, votre compte a été suspendu. Raison : ${reason}.`,
+    text: `Bonjour ${name}, votre compte a été banni. Raison : ${reason}.`,
     html
   };
 };
