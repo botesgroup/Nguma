@@ -256,7 +256,7 @@ export const sendMessage = async (conversationId: string, message: string): Prom
                     ? `${userProfile.first_name} ${userProfile.last_name}` 
                     : userProfile.email;
                     
-                await supabase.from('notifications_queue').insert({
+                await supabase.from('notifications_queue' as any).insert({
                     recipient_email: userProfile.email,
                     template_id: 'chat_new_message_user',
                     notification_params: {
@@ -319,7 +319,7 @@ export const sendMessage = async (conversationId: string, message: string): Prom
                             }
                         }));
                     if (emailQueues.length > 0) {
-                        await supabase.from('notifications_queue').insert(emailQueues);
+                        await supabase.from('notifications_queue' as any).insert(emailQueues);
                     }
                 }
             }

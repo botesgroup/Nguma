@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { z } from "zod";
@@ -12,8 +11,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Eye, EyeOff } from "lucide-react";
 
-import { sendResendNotification } from "@/services/resendNotificationService"; // New import
-import { getProfile } from "@/services/profileService"; // To get user's full_name
+import { sendResendNotification } from "@/services/resendNotificationService";
+import { getProfile } from "@/services/profileService";
 
 const passwordSchema = z.object({
   password: z.string()
@@ -32,7 +31,7 @@ const UpdatePassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [hasValidToken, setHasValidToken] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -44,34 +43,43 @@ const UpdatePassword = () => {
     },
   });
 
-  // Vérifier si un token de réinitialisation est présent
+  // Vérifier si l'utilisateur est autorisé à changer son mot de passe
   useEffect(() => {
-    const checkResetToken = async () => {
-      // Le hash contient le token de réinitialisation après le clic sur le lien
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const accessToken = hashParams.get('access_token');
-      const type = hashParams.get('type');
-
-      if (accessToken && type === 'recovery') {
-        setHasValidToken(true);
+    const checkAuthorization = async () => {
+      // Supabase gère automatiquement la session après un clic sur le lien de réinitialisation
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        setIsAuthorized(true);
       } else {
-        // Pas de token valide, vérifier si l'utilisateur est connecté
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          toast({
-            variant: "destructive",
-            title: "Lien invalide",
-            description: "Le lien de réinitialisation est invalide ou a expiré. Veuillez demander un nouveau lien.",
-          });
-          navigate("/auth");
-        } else {
-          // Utilisateur connecté normalement, peut changer son mot de passe
-          setHasValidToken(true);
-        }
+        // Écouter les changements d'authentification (PASSWORD_RECOVERY)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          if (event === 'PASSWORD_RECOVERY' || session) {
+            setIsAuthorized(true);
+            subscription.unsubscribe();
+          }
+        });
+
+        // Timeout de 5 secondes si rien ne se passe
+        const timeout = setTimeout(() => {
+          if (!isAuthorized) {
+            toast({
+              variant: "destructive",
+              title: "Lien invalide ou expiré",
+              description: "Veuillez demander un nouveau lien de réinitialisation.",
+            });
+            navigate("/auth");
+          }
+        }, 5000);
+
+        return () => {
+          subscription.unsubscribe();
+          clearTimeout(timeout);
+        };
       }
     };
 
-    checkResetToken();
+    checkAuthorization();
   }, [navigate, toast]);
 
   const onSubmit = async (values: PasswordFormValues) => {
@@ -87,7 +95,7 @@ const UpdatePassword = () => {
       if (error) throw error;
 
       // --- Send Password Change Notification ---
-      const profile = await getProfile(); // Fetch profile to get full_name
+      const profile = await getProfile();
       if (profile?.email) {
         await sendResendNotification('password_changed', {
           to: profile.email,
@@ -99,9 +107,9 @@ const UpdatePassword = () => {
 
       toast({
         title: "Mot de passe mis à jour !",
-        description: "Votre mot de passe a été modifié. Un email de confirmation a été envoyé (vérifiez vos spams).",
+        description: "Votre mot de passe a été modifié avec succès.",
       });
-      navigate("/auth"); // Redirect to login page
+      navigate("/auth");
     } catch (error) {
       toast({
         variant: "destructive",
@@ -115,7 +123,7 @@ const UpdatePassword = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      {!hasValidToken ? (
+      {!isAuthorized ? (
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-muted-foreground">Vérification du lien de réinitialisation...</p>

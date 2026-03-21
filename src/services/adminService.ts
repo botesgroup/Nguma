@@ -53,7 +53,22 @@ export const getSingleTransaction = async (transactionId: string) => {
 }
 
 export const approveDeposit = async (transactionId: string) => {
-  const { data, error } = await supabase.rpc('approve_deposit', { transaction_id_to_approve: transactionId });
+  const { data: { session } } = await supabase.auth.getSession();
+  const adminEmail = session?.user?.email || '';
+  
+  // Get internal secret from settings
+  const { data: secretData } = await supabase
+    .from('settings')
+    .select('value')
+    .eq('key', 'internal_secret')
+    .single();
+  const internalSecret = secretData?.value || '';
+
+  const { data, error } = await supabase.rpc('approve_deposit' as any, { 
+    p_admin_email: adminEmail,
+    p_internal_secret: internalSecret,
+    transaction_id_to_approve: transactionId 
+  });
   if (error) throw new Error(error.message);
 
   const result = data as { success: boolean; error?: string };
@@ -62,7 +77,23 @@ export const approveDeposit = async (transactionId: string) => {
 };
 
 export const rejectDeposit = async (transactionId: string, reason: string) => {
-  const { data, error } = await supabase.rpc('reject_deposit', { transaction_id_to_reject: transactionId, reason: reason });
+  const { data: { session } } = await supabase.auth.getSession();
+  const adminEmail = session?.user?.email || '';
+  
+  // Get internal secret from settings
+  const { data: secretData } = await supabase
+    .from('settings')
+    .select('value')
+    .eq('key', 'internal_secret')
+    .single();
+  const internalSecret = secretData?.value || '';
+
+  const { data, error } = await supabase.rpc('reject_deposit' as any, { 
+    p_admin_email: adminEmail,
+    p_internal_secret: internalSecret,
+    transaction_id_to_reject: transactionId,
+    reason: reason 
+  });
   if (error) throw new Error(error.message);
 
   const result = data as { success: boolean; error?: string };
@@ -332,9 +363,22 @@ export const getPendingWithdrawals = async () => {
 };
 
 export const approveWithdrawal = async (transactionId: string, proofUrl: string) => {
-  const { data, error } = await supabase.rpc('approve_withdrawal', {
-    transaction_id_to_approve: transactionId,
-    p_proof_url: proofUrl
+  const { data: { session } } = await supabase.auth.getSession();
+  const adminEmail = session?.user?.email || '';
+  
+  // Get internal secret from settings
+  const { data: secretData } = await supabase
+    .from('settings')
+    .select('value')
+    .eq('key', 'internal_secret')
+    .single();
+  const internalSecret = secretData?.value || '';
+
+  const { data, error } = await supabase.rpc('approve_withdrawal' as any, {
+    p_admin_email: adminEmail,
+    p_internal_secret: internalSecret,
+    p_proof_url: proofUrl,
+    transaction_id_to_approve: transactionId
   });
   if (error) throw new Error(error.message);
 
@@ -344,7 +388,7 @@ export const approveWithdrawal = async (transactionId: string, proofUrl: string)
 };
 
 export const rejectWithdrawal = async (transactionId: string, reason: string) => {
-  const { data, error } = await supabase.rpc('reject_withdrawal', {
+  const { data, error } = await supabase.rpc('reject_withdrawal' as any, {
     transaction_id_to_reject: transactionId,
     reason: reason
   });

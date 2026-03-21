@@ -66,18 +66,23 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => (
 const AppInitializer = () => {
   const navigate = useNavigate();
   const hasRedirected = React.useRef(false);
-  
+
   React.useEffect(() => {
     // Force application to start on index ("/") ONLY on initial mount/refresh
     // Use a ref to prevent this from triggering on internal navigation
+    // EXCEPTION: Don't redirect if user arrives with a password recovery token
     if (!hasRedirected.current) {
-      if (window.location.hash && window.location.hash !== '#/') {
+      const hash = window.location.hash;
+      const hashParams = new URLSearchParams(hash.substring(1));
+      const isRecoveryFlow = hashParams.get('type') === 'recovery' || hash.includes('/update-password');
+      
+      if (!isRecoveryFlow && hash && hash !== '#/') {
         navigate('/', { replace: true });
       }
       hasRedirected.current = true;
     }
   }, [navigate]);
-  
+
   return null;
 };
 
