@@ -45,18 +45,20 @@ serve(async (req) => {
 
     const resend = new Resend(RESEND_API_KEY);
 
-    // TEMPORARY: DISABLED AUTHENTICATION FOR DEBUGGING
-    // const authHeader = req.headers.get('Authorization');
-    // const isServiceKeyAuth = authHeader && authHeader.includes(Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || 'INVALID_KEY');
-    // const isSvcRole = isServiceRole(req);
-    // if (!isSvcRole && !isServiceKeyAuth) {
-    //   try {
-    //     await authenticateUser(req);
-    //   } catch (authErr) {
-    //     console.error("Authentication failed:", authErr.message);
-    //     return errorResponse("Unauthorized: " + authErr.message, 401);
-    //   }
-    // }
+    // Authentication: Prioritize Service Role Key, then attempt user authentication
+    const authHeader = req.headers.get('Authorization');
+    const isServiceKeyAuth = authHeader && authHeader.includes(Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || 'INVALID_KEY');
+    const isSvcRole = isServiceRole(req);
+
+    // If it's not a service role call, and no service key is present, then attempt user authentication
+    if (!isSvcRole && !isServiceKeyAuth) {
+      try {
+        await authenticateUser(req);
+      } catch (authErr) {
+        console.error("Authentication failed:", authErr.message);
+        return errorResponse("Unauthorized: " + authErr.message, 401);
+      }
+    }
 
     // Parse payload
     let payload;

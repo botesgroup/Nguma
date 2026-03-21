@@ -16,8 +16,12 @@ export const ProfileCompletionGuard = ({ children }: ProfileCompletionGuardProps
   const location = useLocation();
 
   if (isLoading) {
-    // You might want to show a global loading spinner here
-    return <div className="w-full h-screen flex items-center justify-center">Chargement du profil...</div>;
+    return (
+      <div className="w-full h-screen flex flex-col items-center justify-center bg-background space-y-4">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-muted-foreground animate-pulse">Configuration de votre espace...</p>
+      </div>
+    );
   }
 
   if (isError) {

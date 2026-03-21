@@ -56,7 +56,14 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       }
     );
 
-    // Initial check
+    // Initial check with timeout
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn("Auth check timed out after 10s, forcing loading to false");
+        setLoading(false);
+      }
+    }, 10000);
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -65,9 +72,17 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       } else {
         setLoading(false);
       }
+      clearTimeout(timeout);
+    }).catch(err => {
+      console.error("Error in getSession:", err);
+      setLoading(false);
+      clearTimeout(timeout);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const handleLogout = async () => {
