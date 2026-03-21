@@ -65,12 +65,16 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => (
 
 const AppInitializer = () => {
   const navigate = useNavigate();
+  const hasRedirected = React.useRef(false);
   
   React.useEffect(() => {
-    // Force application to start on index ("/") on refresh/initial load
-    // This addresses the user request and prevents potential race conditions with guards
-    if (window.location.hash && window.location.hash !== '#/') {
-      navigate('/', { replace: true });
+    // Force application to start on index ("/") ONLY on initial mount/refresh
+    // Use a ref to prevent this from triggering on internal navigation
+    if (!hasRedirected.current) {
+      if (window.location.hash && window.location.hash !== '#/') {
+        navigate('/', { replace: true });
+      }
+      hasRedirected.current = true;
     }
   }, [navigate]);
   
