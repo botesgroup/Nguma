@@ -12,15 +12,14 @@ export const getProfile = async (): Promise<Profile | null> => {
   
   // Timeout for getUser call
   const timeoutPromise = new Promise((_, reject) => 
-    setTimeout(() => reject(new Error("Timeout fetching auth user")), 10000)
+    setTimeout(() => reject(new Error("Timeout getting auth user")), 10000)
   );
 
-  let user;
+  let user: any;
   try {
     const result = await Promise.race([userPromise, timeoutPromise]) as any;
     user = result.data?.user;
   } catch (err) {
-    console.error("Error in getProfile (auth context):", err);
     throw err;
   }
   
@@ -35,7 +34,6 @@ export const getProfile = async (): Promise<Profile | null> => {
     .maybeSingle();
 
   if (error) {
-    console.error("Error fetching profile from DB:", error);
     throw new Error("Could not fetch profile data.");
   }
 
@@ -45,8 +43,7 @@ export const getProfile = async (): Promise<Profile | null> => {
   }
 
   // Si aucun profil n'existe (ex: 1ère connexion OAuth/email), le créer
-  const fullName = user.user_metadata?.full_name || '';
-  const nameParts = fullName.split(' ');
+  const nameParts = (user.user_metadata?.full_name || '').split(' ');
   const firstName = nameParts[0] || '';
   const lastName = nameParts.slice(1).join(' ') || '';
 
@@ -62,14 +59,9 @@ export const getProfile = async (): Promise<Profile | null> => {
     city: null,
     address: null,
     birth_date: null,
-    updated_at: null,
+    updated_at: new Date().toISOString(),
     created_at: user.created_at,
-    total_invested: 0,
-    risk_profile: 'not_set',
-    investment_goals: null,
-    is_active: true,
-    subscription_tier: 'standard',
-    last_login: null,
+    last_dormant_reminder_at: null,
   };
 
   const { data: insertedProfile, error: insertError } = await supabase
@@ -79,7 +71,6 @@ export const getProfile = async (): Promise<Profile | null> => {
     .single();
 
   if (insertError) {
-    console.error("Error inserting new profile:", insertError);
     throw new Error("Could not create new user profile.");
   }
 
