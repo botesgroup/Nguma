@@ -70,14 +70,20 @@ const AppInitializer = () => {
   React.useEffect(() => {
     // Force application to start on index ("/") ONLY on initial mount/refresh
     // Use a ref to prevent this from triggering on internal navigation
-    // EXCEPTION: Don't redirect if user arrives with a password recovery token
+    // EXCEPTION: Don't redirect if user arrives with a password recovery token or on update-password route
     if (!hasRedirected.current) {
       const hash = window.location.hash;
-      const hashParams = new URLSearchParams(hash.substring(1));
-      const isRecoveryFlow = hashParams.get('type') === 'recovery' || hash.includes('/update-password');
+      const isRecoveryFlow = 
+        hash.includes('type=recovery') || 
+        hash.includes('access_token=') || 
+        hash.includes('/update-password') ||
+        hash.includes('error_description='); // Handle error states too
       
       if (!isRecoveryFlow && hash && hash !== '#/') {
+        console.log("AppInitializer: Non-recovery hash detected, redirecting to index:", hash);
         navigate('/', { replace: true });
+      } else if (isRecoveryFlow) {
+        console.log("AppInitializer: Recovery flow detected, skipping redirect:", hash);
       }
       hasRedirected.current = true;
     }

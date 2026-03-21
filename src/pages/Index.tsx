@@ -47,7 +47,11 @@ const Index = () => {
   useEffect(() => {
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
+      // Don't redirect to dashboard if we are in a password recovery flow
+      const hash = window.location.hash;
+      const isRecoveryFlow = hash.includes('type=recovery') || hash.includes('access_token=');
+      
+      if (session && !isRecoveryFlow) {
         navigate("/dashboard");
       }
     });
