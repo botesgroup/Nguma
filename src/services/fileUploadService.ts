@@ -153,18 +153,15 @@ export const initializeChatStorageBucket = async () => {
 
         if (!bucketExists) {
             // Créer le bucket
-            const { error } = await supabase.storage.createBucket(BUCKET_NAME, {
+            const { error: createError } = await supabase.storage.createBucket(BUCKET_NAME, {
                 public: true,
                 fileSizeLimit: MAX_FILE_SIZE,
                 allowedMimeTypes: ALLOWED_FILE_TYPES
             });
 
-            if (error) {
-                console.error('Error creating bucket:', error);
-                throw error;
+            if (createError) {
+                throw createError;
             }
-
-            console.log(`Bucket ${BUCKET_NAME} créé avec succès`);
         }
     } catch (error) {
         console.error('Error initializing storage bucket:', error);

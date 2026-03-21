@@ -35,8 +35,6 @@ export function useRealtimeSync(
                     ...(filter && { filter }),
                 },
                 (payload) => {
-                    console.log(`🔄 Realtime update on ${table}:`, payload);
-
                     // Invalider toutes les queries spécifiées
                     queriesToInvalidate.forEach((queryKey) => {
                         queryClient.invalidateQueries({ queryKey: [queryKey] });
@@ -44,16 +42,13 @@ export function useRealtimeSync(
                 }
             )
             .on('system', { event: 'join' }, () => {
-                console.log(`✅ Realtime connected: ${channelName}`);
             })
             .on('system', { event: 'leave' }, () => {
-                console.warn(`⚠️ Realtime disconnected: ${channelName}`);
             })
             .subscribe();
 
         // Cleanup lors du démontage du composant
         return () => {
-            console.log(`🔌 Unsubscribing from ${channelName}`);
             supabase.removeChannel(channel);
         };
     }, [table, filter, queriesToInvalidate, enabled, queryClient]);

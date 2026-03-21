@@ -62,8 +62,7 @@ export const NotificationBell = () => {
   });
 
   const handleNotificationClick = (notification: any) => {
-    console.log("Notification clicked, link_to:", notification.link_to);
-    // Mark as read first
+    // If the notification is not read, mark it as read.
     if (!notification.is_read) {
       markOneReadMutation.mutate(notification.id);
     }
@@ -74,7 +73,6 @@ export const NotificationBell = () => {
       try {
         const url = new URL(notification.link_to);
         // If the host matches the current host, it's an internal absolute URL
-        // We only want the pathname for react-router-dom
         if (url.origin === window.location.origin) {
           targetPath = url.pathname;
         }

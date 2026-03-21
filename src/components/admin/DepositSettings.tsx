@@ -30,9 +30,12 @@ export const DepositSettings = () => {
 
   const updateSettingMutation = useMutation({
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
-      console.log('DEBUG [mutationFn]: Tentative de mise à jour du paramètre', { key, value });
-      await updateSetting({ key, value });
-      console.log('DEBUG [mutationFn]: Paramètre mis à jour avec succès dans la base de données.');
+      const { error } = await supabase
+        .from('site_settings')
+        .update({ value, updated_at: new Date().toISOString() })
+        .eq('key', key);
+
+      if (error) throw error;
     },
     onSuccess: (data, variables) => {
       // Announce success first
@@ -40,24 +43,14 @@ export const DepositSettings = () => {
         title: 'Paramètres mis à jour',
         description: 'Le statut des dépôts a été enregistré avec succès.',
       });
-      console.log('DEBUG [onSuccess]: updateSettingMutation réussie', { variables });
 
       // Invalidate queries to refetch data and re-render the component
       queryClient.invalidateQueries({ queryKey: ['settings'] });
       queryClient.invalidateQueries({ queryKey: ['deposit-settings'] });
-      console.log('DEBUG [onSuccess]: Requêtes invalidées pour rafraîchir les données.');
 
       const isEnabling = variables.key === 'deposit_enabled' && (variables.value === 'true' || variables.value === true);
 
-      console.log('DEBUG [onSuccess]: Statut mis à jour.', {
-        isEnabling,
-        notifyUsersState: notifyUsers,
-        key: variables.key,
-        val: variables.value
-      });
-
       if (isEnabling && notifyUsers) {
-        console.log('DEBUG [onSuccess]: La base de données va maintenant déclencher le trigger de notification.');
         toast({
           title: '✅ Notifications en cours',
           description: 'Les notifications d\'ouverture de dépôt sont en cours d\'envoi via le système automatique.',
@@ -65,7 +58,6 @@ export const DepositSettings = () => {
       }
     },
     onError: (error) => {
-      console.error('DEBUG [onError]: Erreur lors de la mise à jour du paramètre', error);
       toast({
         variant: 'destructive',
         title: 'Erreur',

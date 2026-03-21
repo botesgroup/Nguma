@@ -164,7 +164,6 @@ export const DEFAULT_PREFERENCES: NotificationPreferences = {
 export const getUserNotificationPreferences = async (
   userId: string
 ): Promise<NotificationPreferences> => {
-  console.log(`DEBUG: getUserNotificationPreferences for userId: ${userId}`);
   try {
     const { data, error } = await supabase
       .from('user_notification_preferences')
@@ -172,13 +171,11 @@ export const getUserNotificationPreferences = async (
       .eq('user_id', userId);
 
     if (error) {
-      console.error('DEBUG: Error fetching notification preferences:', error);
       // Retourner les préférences par défaut en cas d'erreur
       return DEFAULT_PREFERENCES;
     }
 
     if (!data || data.length === 0) {
-      console.log(`DEBUG: No preferences found for userId: ${userId}. Returning default object.`);
       // Si aucune préférence n'est trouvée, retourner l'objet par défaut en mémoire
       return DEFAULT_PREFERENCES;
     }
@@ -198,12 +195,9 @@ export const getUserNotificationPreferences = async (
     });
 
     // Fusionner avec les valeurs par défaut pour s'assurer que tous les types sont présents
-    const mergedPreferences = { ...DEFAULT_PREFERENCES, ...preferences };
-    console.log('DEBUG: Merged preferences:', mergedPreferences);
     return mergedPreferences;
 
   } catch (error) {
-    console.error('DEBUG: Error getting notification preferences:', error);
     return DEFAULT_PREFERENCES;
   }
 };
@@ -216,7 +210,6 @@ export const updateUserNotificationPreferences = async (
   userId: string,
   preferences: Partial<NotificationPreferences>
 ): Promise<{ success: boolean; error?: string }> => {
-  console.log(`DEBUG: upsertUserNotificationPreferences for userId: ${userId}, new preferences:`, preferences);
   try {
     // Préparer les données pour l'upsert
     const upsertData = Object.entries(preferences).map(([type, prefs]) => ({
@@ -232,22 +225,17 @@ export const updateUserNotificationPreferences = async (
       return { success: true };
     }
 
-    console.log('DEBUG: Data for upsert:', upsertData);
-
     // Utiliser upsert pour insérer ou mettre à jour en se basant sur la contrainte unique
     const { error } = await supabase
       .from('user_notification_preferences')
       .upsert(upsertData, { onConflict: 'user_id, notification_type' });
 
     if (error) {
-      console.error('DEBUG: Error upserting preferences:', error);
       return { success: false, error: error.message };
     }
 
-    console.log('DEBUG: Preferences upserted successfully.');
     return { success: true };
   } catch (error) {
-    console.error('DEBUG: Error in upsertUserNotificationPreferences:', error);
     return { success: false, error: (error as Error).message };
   }
 };
@@ -262,7 +250,6 @@ export const shouldSendNotification = async (
   type: NotificationType,
   channel: 'email' | 'push' | 'internal' = 'email'
 ): Promise<boolean> => {
-  console.log(`DEBUG: shouldSendNotification for userId: ${userId}, type: ${type}, channel: ${channel}`);
   try {
     const preferences = await getUserNotificationPreferences(userId);
     const typePrefs = preferences[type];
@@ -270,13 +257,10 @@ export const shouldSendNotification = async (
     if (!typePrefs) {
       // Si le type n'existe pas dans les préférences, utiliser la valeur par défaut
       const defaultValue = DEFAULT_PREFERENCES[type]?.[channel] ?? true;
-      console.log(`DEBUG: TypePrefs not found for ${type}. Using default value: ${defaultValue}`);
       return defaultValue;
     }
-    console.log(`DEBUG: TypePrefs found for ${type}. Returning ${typePrefs[channel]}`);
     return typePrefs[channel] ?? false;
   } catch (error) {
-    console.error('DEBUG: Error checking notification preference:', error);
     // En cas d'erreur, envoyer la notification par sécurité
     return true;
   }
@@ -290,7 +274,6 @@ export const toggleNotificationPreference = async (
   type: NotificationType,
   channel: 'email' | 'push' | 'internal'
 ): Promise<{ success: boolean; error?: string }> => {
-  console.log(`DEBUG: toggleNotificationPreference for userId: ${userId}, type: ${type}, channel: ${channel}`);
   try {
     const currentPreferences = await getUserNotificationPreferences(userId);
     const currentValue = currentPreferences[type][channel];
@@ -298,11 +281,9 @@ export const toggleNotificationPreference = async (
     // Mettre à jour seulement ce canal spécifique
     const newPreferences = { ...currentPreferences };
     newPreferences[type][channel] = !currentValue;
-    console.log('DEBUG: Toggling to new preferences:', newPreferences);
 
     return await updateUserNotificationPreferences(userId, newPreferences);
   } catch (error) {
-    console.error('DEBUG: Error toggling notification preference:', error);
     return { success: false, error: (error as Error).message };
   }
 };
@@ -314,13 +295,10 @@ export const getNotificationPreferencesByType = async (
   userId: string,
   type: NotificationType
 ): Promise<{ email: boolean; push: boolean; internal: boolean } | null> => {
-  console.log(`DEBUG: getNotificationPreferencesByType for userId: ${userId}, type: ${type}`);
   try {
     const preferences = await getUserNotificationPreferences(userId);
-    console.log(`DEBUG: Preferences for type ${type}:`, preferences[type]);
     return preferences[type] || null;
   } catch (error) {
-    console.error('DEBUG: Error getting notification preferences by type:', error);
     return null;
   }
 };
@@ -334,14 +312,12 @@ export const subscribeToNotification = async (
   enabled: boolean,
   userId?: string // Optionnel: si l'userId n'est pas fourni, il sera récupéré
 ): Promise<{ success: boolean; error?: string }> => {
-  console.log(`DEBUG: subscribeToNotification for type: ${type}, enabled: ${enabled}, userId: ${userId}`);
   try {
     let currentUserId = userId;
     if (!currentUserId) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { success: false, error: "Utilisateur non authentifié." };
       currentUserId = user.id;
-      console.log(`DEBUG: subscribeToNotification - fetched currentUserId: ${currentUserId}`);
     }
 
     // 1. Récupérer l'état actuel des préférences (sans effets de bord)
@@ -355,12 +331,10 @@ export const subscribeToNotification = async (
         email: enabled,
       },
     };
-    console.log('DEBUG: subscribeToNotification - new preferences for update:', newPreferences);
 
     // 3. Appeler la fonction d'update robuste qui utilise upsert
     return await updateUserNotificationPreferences(currentUserId, newPreferences);
   } catch (error) {
-    console.error(`DEBUG: Error subscribing to notification type ${type}:`, error);
     return { success: false, error: (error as Error).message };
   }
 };

@@ -8,7 +8,6 @@ type Profile = Database['public']['Tables']['profiles']['Row'];
  * Fetches the profile for the currently authenticated user.
  */
 export const getProfile = async (): Promise<Profile | null> => {
-  console.log("Fetching user for profile...");
   const userPromise = supabase.auth.getUser();
   
   // Timeout for getUser call
@@ -26,11 +25,9 @@ export const getProfile = async (): Promise<Profile | null> => {
   }
   
   if (!user) {
-    console.log("No user found in getProfile");
     throw new Error("User not authenticated.");
   }
 
-  console.log("Fetching profile for user:", user.id);
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
@@ -44,12 +41,10 @@ export const getProfile = async (): Promise<Profile | null> => {
 
   // Si le profil existe déjà, le retourner
   if (data) {
-    console.log("Profile loaded successfully");
     return data;
   }
 
   // Si aucun profil n'existe (ex: 1ère connexion OAuth/email), le créer
-  console.log("No profile found, creating one for:", user.email);
   const fullName = user.user_metadata?.full_name || '';
   const nameParts = fullName.split(' ');
   const firstName = nameParts[0] || '';

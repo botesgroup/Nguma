@@ -39,9 +39,6 @@ export function NotificationSettings() { // Changed to export function
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         setUserId(user.id);
-        console.log('DEBUG: NotificationSettings - userId set:', user.id);
-      } else {
-        console.log('DEBUG: NotificationSettings - user not found from auth.getUser()');
       }
     });
   }, []);
@@ -51,17 +48,15 @@ export function NotificationSettings() { // Changed to export function
     queryFn: () => getUserNotificationPreferences(userId!),
     enabled: !!userId,
     onSuccess: (data) => {
-      console.log('DEBUG: NotificationSettings - preferences loaded:', data);
     },
     onError: (error) => {
-      console.error('DEBUG: NotificationSettings - error loading preferences:', error);
+      console.error('NotificationSettings - error loading preferences:', error);
     }
   });
 
   const mutation = useMutation({
     mutationFn: async ({ type, channel, value }: { type: NotificationType; channel: 'email' | 'push' | 'internal'; value: boolean }) => {
       if (!userId) {
-        console.error("DEBUG: NotificationSettings - Mutation attempted without userId.");
         throw new Error("User not authenticated.");
       }
 
@@ -72,11 +67,9 @@ export function NotificationSettings() { // Changed to export function
           [channel]: value,
         },
       };
-      console.log('DEBUG: NotificationSettings - Attempting to update preferences:', { userId, type, channel, value, newPreferences });
       await updateUserNotificationPreferences(userId, newPreferences);
     },
     onSuccess: () => {
-      console.log('DEBUG: NotificationSettings - Mutation successful.');
       queryClient.invalidateQueries({ queryKey: ['userNotificationPreferences', userId] });
       toast({
         title: 'Préférences mises à jour',
@@ -84,7 +77,7 @@ export function NotificationSettings() { // Changed to export function
       });
     },
     onError: (error) => {
-      console.error('DEBUG: NotificationSettings - Mutation failed:', error);
+      console.error('NotificationSettings - Mutation failed:', error);
       toast({
         variant: 'destructive',
         title: 'Erreur',
@@ -94,7 +87,6 @@ export function NotificationSettings() { // Changed to export function
   });
 
   if (isLoading || !userId) {
-    console.log('DEBUG: NotificationSettings - Loading state. isLoading:', isLoading, 'userId:', userId);
     return (
       <div className="flex items-center justify-center py-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -102,7 +94,6 @@ export function NotificationSettings() { // Changed to export function
     );
   }
   
-  console.log('DEBUG: NotificationSettings - Rendering with preferences:', preferences);
 
   const notificationTypes = Object.keys(DEFAULT_PREFERENCES) as NotificationType[];
 

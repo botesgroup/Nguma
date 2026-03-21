@@ -17,7 +17,7 @@ export type SendEmailPayload = NotificationParams & {
 export const sendEmailNotification = async (payload: SendEmailPayload) => {
   const { template_id, ...params } = payload;
 
-  console.log(`[Orchestration] Enqueuing email ${template_id} to ${params.to}`);
+  // In a real production app, you might want to log this to a monitoring service
 
   return await sendResendNotification(template_id, params);
 };
