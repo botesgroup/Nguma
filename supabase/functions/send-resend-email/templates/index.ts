@@ -45,7 +45,8 @@ import {
 } from './categories/support/supportRequest.ts';
 import {
   chatEscalationAdminTemplate,
-  chatNewMessageAdminTemplate
+  chatNewMessageAdminTemplate,
+  chatNewMessageUserTemplate
 } from './categories/support/chatSupport.ts';
 
 // Import refund templates
@@ -109,6 +110,7 @@ export const TEMPLATES: Record<string, EmailTemplate> = {
   new_support_request_admin: newSupportRequestAdminTemplate,
   chat_escalation_admin: chatEscalationAdminTemplate,
   chat_new_message_admin: chatNewMessageAdminTemplate,
+  chat_new_message_user: chatNewMessageUserTemplate,
 
   // Refund Templates
   refund_requested: refundTemplates[0],

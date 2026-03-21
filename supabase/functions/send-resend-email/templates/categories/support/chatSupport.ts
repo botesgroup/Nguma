@@ -79,3 +79,40 @@ export const chatNewMessageAdminTemplate: EmailTemplate = {
     requiredFields: ['to', 'name', 'email', 'conversationId', 'message'],
     render: renderChatNewMessageAdmin
 };
+
+// Template pour un nouveau message (Utilisateur)
+const renderChatNewMessageUser = (params: EmailParams, helpers: TemplateHelpers): TemplateData => {
+    const { escapeHtml, siteUrl } = helpers;
+    const { name, conversationId, message } = params;
+
+    const subject = `Nouveau message du support technique`;
+    const previewText = `L'équipe Nguma a répondu à votre demande : "${escapeHtml(message?.substring(0, 50) || '...')}"`;
+
+    const content = `
+    ${StatusBadge('success', 'Nouveau Message')}
+    <h2>Nouveau message de notre équipe</h2>
+    <p class="lead" style="font-size: 16px; line-height: 1.5; color: #4B5563;">
+      Bonjour ${escapeHtml(name || 'cher client')}, l'équipe de support Nguma vient de répondre à votre demande.
+    </p>
+    ${InfoCard(`
+      <p style="font-style: italic; color: #374151;">"${escapeHtml(message || 'N/A')}"</p>
+    `, 'info')}
+    <div class="cta-buttons">
+      <a href="${siteUrl}/support?conversation=${escapeHtml(conversationId || '')}" class="btn btn-primary">Répondre sur le Chat</a>
+    </div>
+  `;
+    const html = BaseLayout(content, previewText, siteUrl);
+    return {
+        subject,
+        previewText,
+        text: `Bonjour ${name || 'cher client'}, nouveau message du support : ${message}. Répondre ici: ${siteUrl}/support?conversation=${conversationId}`,
+        html
+    };
+};
+
+export const chatNewMessageUserTemplate: EmailTemplate = {
+    id: 'chat_new_message_user',
+    category: 'support',
+    requiredFields: ['to', 'name', 'conversationId', 'message'],
+    render: renderChatNewMessageUser
+};

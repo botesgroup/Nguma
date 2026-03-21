@@ -234,7 +234,14 @@ export const sendMessage = async (conversationId: string, message: string): Prom
 
         // 5. Create Notification
         if (isAdmin) {
-            // Notify User
+            // Get user info to send email
+            const { data: userProfile } = await supabase
+                .from('profiles')
+                .select('email, first_name, last_name')
+                .eq('id', conversation.user_id)
+                .single();
+
+            // Notify User (In app)
             await supabase.from('notifications').insert({
                 user_id: conversation.user_id,
                 type: 'support',
@@ -242,6 +249,23 @@ export const sendMessage = async (conversationId: string, message: string): Prom
                 message: "Nouveau message de support de l'administration",
                 link_to: '/support'
             });
+
+            // Notify User (Email)
+            if (userProfile && userProfile.email) {
+                const userName = userProfile.first_name && userProfile.last_name 
+                    ? `${userProfile.first_name} ${userProfile.last_name}` 
+                    : userProfile.email;
+                    
+                await supabase.from('notifications_queue').insert({
+                    recipient_email: userProfile.email,
+                    template_id: 'chat_new_message_user',
+                    notification_params: {
+                        name: userName,
+                        conversationId: conversationId,
+                        message: trimmedMessage
+                    }
+                });
+            }
         } else {
             // Notify Admins
             // Get sender name
@@ -262,6 +286,7 @@ export const sendMessage = async (conversationId: string, message: string): Prom
                 .eq('role', 'admin');
 
             if (admins && admins.length > 0) {
+                // In app notifications
                 const notifications = admins.map(admin => ({
                     user_id: admin.user_id,
                     type: 'support',
@@ -271,6 +296,32 @@ export const sendMessage = async (conversationId: string, message: string): Prom
                 }));
 
                 await supabase.from('notifications').insert(notifications);
+
+                // Fetch admins emails
+                const adminIds = admins.map(a => a.user_id);
+                const { data: adminProfiles } = await supabase
+                    .from('profiles')
+                    .select('email')
+                    .in('id', adminIds);
+
+                // Email notifications
+                if (adminProfiles && adminProfiles.length > 0) {
+                    const emailQueues = adminProfiles
+                        .filter(p => p.email)
+                        .map(p => ({
+                            recipient_email: p.email,
+                            template_id: 'chat_new_message_admin',
+                            notification_params: {
+                                name: senderName,
+                                email: profile?.email || user.email,
+                                conversationId: conversationId,
+                                message: trimmedMessage
+                            }
+                        }));
+                    if (emailQueues.length > 0) {
+                        await supabase.from('notifications_queue').insert(emailQueues);
+                    }
+                }
             }
         }
     }
