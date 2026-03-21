@@ -1,7 +1,7 @@
 {
-    "name": "Nguma - Plateforme d'Investissement",
+    "name": "Nguma",
     "short_name": "Nguma",
-    "description": "Plateforme d'investissement sécurisée et performante",
+    "description": "Nguma",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#ffffff",

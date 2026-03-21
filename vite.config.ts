@@ -17,9 +17,9 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'logo.png', 'robots.txt', 'notification.mp3'],
       manifest: {
-        name: 'Nguma - Plateforme d\'Investissement',
+        name: 'Nguma',
         short_name: 'Nguma',
-        description: 'Plateforme d\'investissement sécurisée et performante',
+        description: 'Nguma',
         theme_color: '#667eea',
         background_color: '#ffffff',
         display: 'standalone',
