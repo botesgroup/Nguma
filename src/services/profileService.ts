@@ -8,88 +8,87 @@ type Profile = Database['public']['Tables']['profiles']['Row'];
  * Fetches the profile for the currently authenticated user.
  */
 export const getProfile = async (): Promise<Profile | null> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("User not authenticated.");
+  console.log("Fetching user for profile...");
+  const userPromise = supabase.auth.getUser();
+  
+  // Timeout for getUser call
+  const timeoutPromise = new Promise((_, reject) => 
+    setTimeout(() => reject(new Error("Timeout fetching auth user")), 10000)
+  );
 
+  let user;
+  try {
+    const result = await Promise.race([userPromise, timeoutPromise]) as any;
+    user = result.data?.user;
+  } catch (err) {
+    console.error("Error in getProfile (auth context):", err);
+    throw err;
+  }
+  
+  if (!user) {
+    console.log("No user found in getProfile");
+    throw new Error("User not authenticated.");
+  }
+
+  console.log("Fetching profile for user:", user.id);
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (error && error.code !== 'PGRST116') { // PGRST116: no rows found
-    console.error("Error fetching profile:", error);
+  if (error) {
+    console.error("Error fetching profile from DB:", error);
     throw new Error("Could not fetch profile data.");
   }
 
   // Si le profil existe déjà, le retourner
   if (data) {
+    console.log("Profile loaded successfully");
     return data;
   }
 
   // Si aucun profil n'existe (ex: 1ère connexion OAuth/email), le créer
-  if (!data && user) {
-    // Essayer de séparer le nom complet en prénom et nom
-    const fullName = user.user_metadata.full_name || '';
-    const nameParts = fullName.split(' ');
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
+  console.log("No profile found, creating one for:", user.email);
+  const fullName = user.user_metadata?.full_name || '';
+  const nameParts = fullName.split(' ');
+  const firstName = nameParts[0] || '';
+  const lastName = nameParts.slice(1).join(' ') || '';
 
-    const newProfile: Profile = {
-      id: user.id,
-      email: user.email || '',
-      first_name: user.user_metadata.first_name || firstName,
-      last_name: user.user_metadata.last_name || lastName,
-      avatar_url: user.user_metadata.avatar_url || null,
-      post_nom: null,
-      phone: null,
-      country: null,
-      city: null,
-      address: null,
-      birth_date: null,
-      updated_at: null,
-      created_at: user.created_at,
-      total_invested: 0,
-      risk_profile: 'not_set',
-      investment_goals: null,
-      is_active: true,
-      subscription_tier: 'standard',
-      last_login: null,
-    };
+  const newProfile: Profile = {
+    id: user.id,
+    email: user.email || '',
+    first_name: user.user_metadata?.first_name || firstName,
+    last_name: user.user_metadata?.last_name || lastName,
+    avatar_url: user.user_metadata?.avatar_url || null,
+    post_nom: null,
+    phone: null,
+    country: null,
+    city: null,
+    address: null,
+    birth_date: null,
+    updated_at: null,
+    created_at: user.created_at,
+    total_invested: 0,
+    risk_profile: 'not_set',
+    investment_goals: null,
+    is_active: true,
+    subscription_tier: 'standard',
+    last_login: null,
+  };
 
-    // Insérer le nouveau profil dans la base de données
-    const { data: insertedProfile, error: insertError } = await supabase
-      .from('profiles')
-      .insert(newProfile)
-      .select()
-      .single();
+  const { data: insertedProfile, error: insertError } = await supabase
+    .from('profiles')
+    .insert(newProfile)
+    .select()
+    .single();
 
-    if (insertError) {
-      console.error("Error inserting new profile:", insertError);
-      throw new Error("Could not create new user profile.");
-    }
-
-    // [DISABLED] Si l'insertion réussit, envoyer l'e-mail de bienvenue
-    /*
-    if (insertedProfile) {
-      try {
-        await sendEmailNotification({
-          template_id: 'welcome_new_user',
-          to: newProfile.email,
-          name: fullName || `${newProfile.first_name} ${newProfile.last_name}`.trim() || 'Nouvel utilisateur',
-          userId: newProfile.id,
-        });
-      } catch (emailError) {
-        console.error("Failed to send welcome email:", emailError);
-        // Do not throw, email is a non-critical side effect
-      }
-    }
-    */
-
-    return insertedProfile;
+  if (insertError) {
+    console.error("Error inserting new profile:", insertError);
+    throw new Error("Could not create new user profile.");
   }
 
-  return null;
+  return insertedProfile;
 };
 
 /**

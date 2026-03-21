@@ -32,7 +32,19 @@ export default defineConfig(({ mode }) => ({
             src: '/logo.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
+          },
+          {
+            src: '/logo.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
+          {
+            src: '/logo.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any'
           },
           {
             src: '/favicon.ico',

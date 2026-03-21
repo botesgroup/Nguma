@@ -11,6 +11,8 @@ export const ProfileCompletionGuard = ({ children }: ProfileCompletionGuardProps
   const { data: profile, isLoading, isError } = useQuery({
     queryKey: ['profile'],
     queryFn: getProfile,
+    retry: false, // Ne pas réessayer indéfiniment si ça échoue
+    staleTime: 5000,
   });
 
   const location = useLocation();

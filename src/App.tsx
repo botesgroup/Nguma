@@ -44,6 +44,7 @@ const PaymentSchedulerPage = lazy(() => import("./pages/admin/accounting/Payment
 const LedgerPage = lazy(() => import("./pages/admin/accounting/LedgerPage"));
 const NotificationSettings = lazy(() => import("./pages/NotificationSettings").then(module => ({ default: module.NotificationSettings }))); // Corrected import
 import { ChatButton } from "./components/ChatButton";
+import InstallPWA from "./components/InstallPWA";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +69,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <InstallPWA />
         <NotificationProvider>
           <Suspense fallback={
             <div className="flex items-center justify-center h-screen w-full">
