@@ -239,8 +239,8 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
     }, []);
 
     return (
-        <Card className="fixed bottom-4 right-4 w-full md:w-[800px] h-[650px] shadow-2xl flex flex-col z-50 overflow-hidden">
-            <CardHeader className="flex-row items-center justify-between p-4 border-b flex-shrink-0">
+        <Card className="fixed inset-0 md:inset-auto md:bottom-4 md:right-4 w-full md:w-[800px] h-full md:h-[700px] md:max-h-[85vh] shadow-2xl flex flex-col z-50 overflow-hidden md:rounded-2xl border-0 md:border animate-in slide-in-from-bottom-8 duration-300 fade-in zoom-in-95 ease-out">
+            <CardHeader className="flex-row items-center justify-between p-4 border-b flex-shrink-0 bg-gradient-to-r from-primary/10 to-transparent backdrop-blur-sm">
                 <div className="flex items-center gap-2 flex-1">
                     {/* Bouton Menu (mobile uniquement) */}
                     <Button

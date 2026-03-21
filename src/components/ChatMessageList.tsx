@@ -89,7 +89,7 @@ export function ChatMessageList({ messages, onSuggestionClick, isTyping = false 
                             className={`flex gap-3 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}
                         >
                             {/* Avatar */}
-                            <Avatar className="h-8 w-8 flex-shrink-0">
+                            <Avatar className={`h-8 w-8 flex-shrink-0 shadow-sm border ${isOwnMessage ? 'border-primary/20' : 'border-border/50'}`}>
                                 <AvatarFallback className={
                                     message.sender_id === '00000000-0000-0000-0000-000000000000'
                                         ? 'bg-gradient-to-br from-purple-500 to-pink-500 text-white'
@@ -100,20 +100,22 @@ export function ChatMessageList({ messages, onSuggestionClick, isTyping = false 
                             </Avatar>
 
                             {/* Message bubble */}
-                            <div className={`flex flex-col gap-1 max-w-[75%] ${isOwnMessage ? 'items-end' : 'items-start'}`}>
+                            <div className={`flex flex-col gap-1 max-w-[80%] ${isOwnMessage ? 'items-end' : 'items-start'}`}>
                                 {/* Badge IA si message généré par l'IA */}
                                 {message.sender_id === '00000000-0000-0000-0000-000000000000' && (
-                                    <span className="text-xs text-purple-500 dark:text-purple-400 font-medium px-1 mb-1">🤖 Réponse automatique</span>
+                                    <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 font-semibold px-2 py-0.5 rounded-full mb-0.5">
+                                        🤖 Réponse automatisée
+                                    </span>
                                 )}
                                 <div
-                                    className={`rounded-2xl px-4 py-2 shadow-sm ${isOwnMessage
-                                        ? 'bg-primary text-primary-foreground rounded-tr-sm'
+                                    className={`rounded-2xl px-4 py-2.5 shadow-sm transition-all duration-200 ${isOwnMessage
+                                        ? 'bg-gradient-to-tr from-primary to-primary/90 text-primary-foreground rounded-tr-sm shadow-primary/20'
                                         : message.sender_id === '00000000-0000-0000-0000-000000000000'
-                                            ? 'bg-white dark:bg-zinc-900 border border-purple-200 dark:border-purple-800 text-zinc-800  dark:text-zinc-100 rounded-tl-sm shadow-sm'
-                                            : 'bg-muted text-foreground rounded-tl-sm'
+                                            ? 'bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/10 dark:to-pink-900/10 border border-purple-100/50 dark:border-purple-800/30 text-zinc-800 dark:text-zinc-100 rounded-tl-sm'
+                                            : 'bg-muted text-foreground rounded-tl-sm border border-border/50'
                                         }`}
                                 >
-                                    <div className="text-sm break-words">
+                                    <div className="text-[15px] leading-relaxed break-words">
                                         {formatMessage(message.message, message.sender_id === '00000000-0000-0000-0000-000000000000')}
                                     </div>
 

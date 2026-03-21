@@ -97,11 +97,23 @@ export function ChatMessageInput({ onSend, disabled, aiOnlyMode = false }: ChatM
             )}
 
             <div
-                className={`flex gap-2 ${isDragging ? 'ring-2 ring-primary rounded-lg p-2' : ''}`}
+                className={`relative flex items-end gap-1.5 p-1.5 bg-muted/40 dark:bg-muted/10 border border-border/50 rounded-[1.75rem] focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all duration-200 ${isDragging ? 'ring-2 ring-primary bg-primary/5' : ''}`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
             >
+                {/* Bouton d'attach fichier */}
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isInputDisabled}
+                    className="h-10 w-10 flex-shrink-0 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/60 mb-0.5 ml-0.5 transition-colors"
+                >
+                    <Paperclip className="h-[18px] w-[18px]" />
+                </Button>
+
                 <Textarea
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
@@ -111,35 +123,25 @@ export function ChatMessageInput({ onSend, disabled, aiOnlyMode = false }: ChatM
                             ? "📎 Déposez vos fichiers ici..."
                             : aiOnlyMode
                                 ? "Zone de texte désactivée (utilisez les suggestions)"
-                                : "Tapez votre message..."
+                                : "Votre message..."
                     }
-                    className={`min-h-[60px] max-h-[120px] resize-none ${aiOnlyMode ? 'cursor-not-allowed opacity-60' : ''}`}
+                    className={`min-h-[44px] max-h-[120px] py-3 px-1 bg-transparent border-0 focus-visible:ring-0 resize-none shadow-none text-[15px] leading-relaxed ${aiOnlyMode ? 'cursor-not-allowed opacity-60' : ''}`}
                     disabled={isInputDisabled}
                 />
 
-                <div className="flex flex-col gap-2">
-                    {/* Bouton d'attach fichier */}
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isInputDisabled}
-                        className="h-[60px] w-[60px] flex-shrink-0"
-                    >
-                        <Paperclip className="h-5 w-5" />
-                    </Button>
-
-                    {/* Bouton d'envoi */}
-                    <Button
-                        onClick={handleSend}
-                        disabled={isInputDisabled || (!message.trim() && selectedFiles.length === 0)}
-                        size="icon"
-                        className="h-[60px] w-[60px] flex-shrink-0"
-                    >
-                        <Send className="h-5 w-5" />
-                    </Button>
-                </div>
+                {/* Bouton d'envoi */}
+                <Button
+                    onClick={handleSend}
+                    disabled={isInputDisabled || (!message.trim() && selectedFiles.length === 0)}
+                    size="icon"
+                    className={`h-10 w-10 flex-shrink-0 rounded-full transition-all duration-300 mb-0.5 mr-0.5 ${
+                        isInputDisabled || (!message.trim() && selectedFiles.length === 0)
+                            ? 'bg-muted text-muted-foreground'
+                            : 'bg-primary text-primary-foreground shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-95'
+                    }`}
+                >
+                    <Send className="h-[18px] w-[18px] ml-0.5" />
+                </Button>
             </div>
 
             <input
