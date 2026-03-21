@@ -27,8 +27,19 @@ export const ProfileCompletionGuard = ({ children }: ProfileCompletionGuardProps
   }
 
   if (isError) {
-    // Handle error case, maybe redirect to an error page or show a message
-    return <div>Erreur lors du chargement du profil.</div>;
+    // If we're authenticated but getting a profile error, give it a moment to retry
+    // or show a slightly more helpful message.
+    return (
+      <div className="w-full h-screen flex flex-col items-center justify-center bg-background space-y-4">
+        <p className="text-destructive">Un problème est survenu lors du chargement de votre profil.</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium"
+        >
+          Réessayer
+        </button>
+      </div>
+    );
   }
 
   const isProfileComplete = profile?.first_name && profile.first_name.trim() !== '' &&

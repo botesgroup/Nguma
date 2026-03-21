@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AppHeader } from "@/components/AppHeader";
@@ -63,12 +63,27 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => (
   </SidebarProvider>
 );
 
+const AppInitializer = () => {
+  const navigate = useNavigate();
+  
+  React.useEffect(() => {
+    // Force application to start on index ("/") on refresh/initial load
+    // This addresses the user request and prevents potential race conditions with guards
+    if (window.location.hash && window.location.hash !== '#/') {
+      navigate('/', { replace: true });
+    }
+  }, [navigate]);
+  
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <HashRouter>
+        <AppInitializer />
         <InstallPWA />
         <NotificationProvider>
           <Suspense fallback={
@@ -289,7 +304,7 @@ const App = () => (
             </Routes>
           </Suspense>
         </NotificationProvider>
-      </BrowserRouter>
+      </HashRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
