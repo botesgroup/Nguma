@@ -33,10 +33,13 @@ export const ProfileCompletionGuard = ({ children }: ProfileCompletionGuardProps
       <div className="w-full h-screen flex flex-col items-center justify-center bg-background space-y-4">
         <p className="text-destructive">Un problème est survenu lors du chargement de votre profil.</p>
         <button 
-          onClick={() => window.location.reload()} 
+          onClick={() => {
+            window.location.hash = '#/';
+            window.location.reload();
+          }} 
           className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium"
         >
-          Réessayer
+          Retour à l'accueil
         </button>
       </div>
     );
