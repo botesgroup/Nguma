@@ -21,6 +21,9 @@ import { uploadChatFile } from "@/services/fileUploadService";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
+import { getSettingByKey } from "@/services/settingsService";
+import { MessageCircle } from "lucide-react";
+
 interface ChatWindowProps {
     onClose: () => void;
 }
@@ -34,13 +37,26 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
     const [showHistory, setShowHistory] = useState(true);
     const [humanRequested, setHumanRequested] = useState(false);
     const [isTyping, setIsTyping] = useState(false);
+    const [whatsappNumber, setWhatsappNumber] = useState<string>('');
     const { toast } = useToast();
     const unsubscribeRef = useRef<(() => void) | null>(null);
 
     // Charger toutes les conversations au démarrage
     useEffect(() => {
         loadConversations();
+        loadSettings();
     }, []);
+
+    const loadSettings = async () => {
+        try {
+            const setting = await getSettingByKey('whatsapp_number');
+            if (setting?.value) {
+                setWhatsappNumber(setting.value);
+            }
+        } catch (error) {
+            console.error('Error loading WhatsApp setting:', error);
+        }
+    };
 
     // Charger les messages quand la conversation active change
     useEffect(() => {
@@ -202,7 +218,8 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
                 }, 500);
             }
 
-            // Appeler l'IA après un court délai si message texte présent
+            // AI moderator has been disabled per user request
+            /*
             if (message.trim()) {
                 setIsTyping(true);
                 setTimeout(async () => {
@@ -216,6 +233,7 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
                     }
                 }, 500);
             }
+            */
 
         } catch (error) {
             console.error('Error sending message:', error);
@@ -239,22 +257,42 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
     }, []);
 
     return (
-        <Card className="fixed inset-0 md:inset-auto md:bottom-4 md:right-4 w-full md:w-[800px] h-full md:h-[700px] md:max-h-[85vh] shadow-2xl flex flex-col z-50 overflow-hidden md:rounded-2xl border-0 md:border animate-in slide-in-from-bottom-8 duration-300 fade-in zoom-in-95 ease-out">
-            <CardHeader className="flex-row items-center justify-between p-4 border-b flex-shrink-0 bg-gradient-to-r from-primary/10 to-transparent backdrop-blur-sm">
-                <div className="flex items-center gap-2 flex-1">
-                    {/* Bouton Menu (mobile uniquement) */}
+        <Card className="fixed inset-0 md:inset-auto md:bottom-4 md:right-4 w-full md:w-[450px] lg:w-[900px] h-full md:h-[600px] lg:h-[750px] md:max-h-[90vh] shadow-premium flex flex-col z-50 overflow-hidden md:rounded-2xl border-0 md:border animate-slide-up transition-all duration-300">
+            <CardHeader className="flex flex-row items-center justify-between p-3 md:p-4 border-b flex-shrink-0 bg-background/80 backdrop-blur-md sticky top-0 z-10">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="md:hidden"
+                        className="md:hidden hover:bg-primary/10 transition-colors"
                         onClick={() => setShowHistory(!showHistory)}
                     >
-                        <Menu className="h-4 w-4" />
+                        <Menu className="h-5 w-5" />
                     </Button>
-                    <CardTitle className="text-lg mr-2">Support Chat</CardTitle>
-
-                    {/* Sélecteur de conversation */}
-                    <div className="flex-1 max-w-[300px] hidden md:block">
+                    <div className="flex flex-col truncate">
+                        <CardTitle className="text-base md:text-lg font-bold tracking-tight">Nguma Support</CardTitle>
+                        <div className="flex items-center gap-1.5">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                            </span>
+                            <span className="text-[10px] md:text-xs text-muted-foreground font-medium uppercase tracking-wider">En ligne</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div className="flex items-center gap-1 md:gap-2">
+                    {whatsappNumber && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50 rounded-full h-8 w-8 md:h-10 md:w-10 transition-all duration-300"
+                            onClick={() => window.open(`https://wa.me/${whatsappNumber.replace(/\D/g, '')}`, '_blank')}
+                            title="Contacter sur WhatsApp"
+                        >
+                            <MessageCircle className="h-5 w-5 md:h-6 md:w-6" />
+                        </Button>
+                    )}
+                    <div className="hidden lg:block w-64 mr-2">
                         <ConversationSelector
                             conversations={conversations}
                             currentConversationId={activeConversationId}
@@ -263,23 +301,30 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
                             loading={loading}
                         />
                     </div>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={onClose}
+                        className="hover:bg-destructive/10 hover:text-destructive transition-colors rounded-full h-8 w-8 md:h-10 md:w-10"
+                    >
+                        <X className="h-5 w-5" />
+                    </Button>
                 </div>
-                <Button variant="ghost" size="icon" onClick={onClose}>
-                    <X className="h-4 w-4" />
-                </Button>
             </CardHeader>
 
-            <CardContent className="flex-1 p-0 flex overflow-hidden min-h-0">
+            <CardContent className="flex-1 p-0 flex overflow-hidden min-h-0 relative bg-slate-50/50 dark:bg-zinc-950/50">
                 {loading ? (
-                    <div className="flex-1 flex items-center justify-center">
-                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    <div className="flex-1 flex flex-col items-center justify-center space-y-3">
+                        <Loader2 className="h-10 w-10 animate-spin text-primary/60" />
+                        <p className="text-sm text-muted-foreground font-medium animate-pulse">Initialisation du support...</p>
                     </div>
                 ) : (
                     <>
                         {/* Historique (sidebar sur desktop, plein écran sur mobile) */}
                         <div className={`
                             ${showHistory ? 'flex' : 'hidden'} 
-                            md:flex md:w-72 flex-shrink-0 h-full
+                            md:flex md:w-64 lg:w-72 flex-shrink-0 h-full border-r bg-background/40 backdrop-blur-sm
+                            transition-all duration-300 ease-in-out
                         `}>
                             <ConversationHistory
                                 conversations={conversations}
@@ -292,18 +337,22 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
                         {/* Zone de chat */}
                         <div className={`
                             ${!showHistory ? 'flex' : 'hidden'} 
-                            md:flex flex-1 flex-col min-w-0 h-full
+                            md:flex flex-1 flex-col min-w-0 h-full bg-transparent
                         `}>
-                            <ChatMessageList
-                                messages={messages}
-                                onSuggestionClick={handleSendMessage}
-                                isTyping={isTyping}
-                            />
-                            <ChatMessageInput
-                                onSend={handleSendMessage}
-                                disabled={sending}
-                                aiOnlyMode={!humanRequested && !messages.some(msg => msg.is_admin)}
-                            />
+                            <div className="flex-1 overflow-hidden relative">
+                                <ChatMessageList
+                                    messages={messages}
+                                    onSuggestionClick={handleSendMessage}
+                                    isTyping={isTyping}
+                                />
+                            </div>
+                            <div className="p-2 md:p-4 bg-background/60 backdrop-blur-md border-t">
+                                <ChatMessageInput
+                                    onSend={handleSendMessage}
+                                    disabled={sending}
+                                    aiOnlyMode={!humanRequested && !messages.some(msg => msg.is_admin)}
+                                />
+                            </div>
                         </div>
                     </>
                 )}

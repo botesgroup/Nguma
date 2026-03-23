@@ -50,6 +50,109 @@ function MessageAttachments({ messageId }: { messageId: string }) {
     );
 }
 
+interface ChatMessageListProps {
+    messages: ChatMessage[];
+    onSuggestionClick?: (message: string) => void;
+    isTyping?: boolean;
+}
+
+// Composant pour afficher un message individuel avec son profil
+function MessageItem({ 
+    message, 
+    isOwnMessage, 
+    onSuggestionClick,
+    isNextSameSender 
+}: { 
+    message: ChatMessage; 
+    isOwnMessage: boolean;
+    onSuggestionClick?: (message: string) => void;
+    isNextSameSender: boolean;
+}) {
+    const isAdmin = message.is_admin;
+    const isAi = message.sender_id === '00000000-0000-0000-0000-000000000000';
+    
+    // Récupérer le profil de l'expéditeur
+    const { data: profile } = useQuery({
+        queryKey: ['profile', message.sender_id],
+        queryFn: async () => {
+            if (isAi) return { first_name: 'Assistant', last_name: 'IA', avatar_url: null };
+            
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('first_name, last_name, avatar_url')
+                .eq('id', message.sender_id)
+                .single();
+            
+            if (error) return null;
+            return data;
+        },
+        enabled: !!message.sender_id && !isAi
+    });
+
+    const displayName = isAi ? 'Assistant IA' : profile ? `${profile.first_name} ${profile.last_name}` : isAdmin ? 'Support Client' : 'Utilisateur';
+
+    return (
+        <div className={`flex gap-3 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'} ${isNextSameSender ? 'mb-1' : 'mb-4'}`}>
+            {/* Avatar */}
+            <Avatar className={`h-9 w-9 flex-shrink-0 shadow-sm border transition-transform hover:scale-110 ${isOwnMessage ? 'border-primary/20' : 'border-border/50'}`}>
+                {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt={displayName} className="h-full w-full object-cover" />
+                ) : (
+                    <AvatarFallback className={
+                        isAi ? 'bg-gradient-to-br from-purple-500 to-pink-500 text-white'
+                             : isAdmin ? 'bg-primary text-primary-foreground font-bold' : 'bg-slate-200 text-slate-600 font-bold'
+                    }>
+                        {isAi ? '🤖' : displayName.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                )}
+            </Avatar>
+
+            {/* Message content */}
+            <div className={`flex flex-col gap-1 max-w-[85%] md:max-w-[75%] ${isOwnMessage ? 'items-end' : 'items-start'} animate-in fade-in slide-in-from-bottom-1 duration-300`}>
+                {/* Sender Name */}
+                {!isOwnMessage && (
+                    <span className="text-[11px] font-bold text-muted-foreground/80 px-1 mb-0.5 flex items-center gap-1.5">
+                        {displayName}
+                        {isAdmin && !isAi && <span className="h-1 w-1 rounded-full bg-primary"></span>}
+                        {isAdmin && !isAi && <span className="text-[9px] text-primary uppercase tracking-tighter">Admin</span>}
+                    </span>
+                )}
+
+                {/* Message bubble */}
+                <div
+                    className={`relative rounded-2xl px-4 py-2.5 shadow-elegant transition-all duration-300 group ${isOwnMessage
+                        ? 'bg-primary text-primary-foreground rounded-tr-sm'
+                        : isAi
+                            ? 'bg-white dark:bg-zinc-900 border border-purple-100/50 dark:border-purple-800/20 text-foreground rounded-tl-sm ring-1 ring-purple-500/5'
+                            : 'bg-white dark:bg-zinc-900 text-foreground rounded-tl-sm border border-border/40 shadow-sm'
+                        }`}
+                >
+                    <div className="text-[14px] md:text-[15px] leading-relaxed whitespace-pre-wrap">
+                        {formatMessage(message.message, isAi)}
+                    </div>
+
+                    {/* Fichiers attachés */}
+                    <MessageAttachments messageId={message.id} />
+                    
+                    {/* Petit triangle de bulle */}
+                    <div className={`absolute top-0 w-2 h-2 ${isOwnMessage ? '-right-1 bg-primary rotate-45' : '-left-1 bg-white dark:bg-zinc-900 border-l border-t border-border/40 rotate-[-45deg]'} ${isAi ? 'border-purple-100/50 dark:border-purple-800/20' : ''}`} />
+                </div>
+
+                {/* Timestamp */}
+                <div className={`flex items-center gap-1.5 text-[10px] text-muted-foreground/60 font-medium px-1 mt-0.5`}>
+                    {format(new Date(message.created_at), 'HH:mm', { locale: fr })}
+                    {message.read_at && isOwnMessage && (
+                        <div className="flex -space-x-1 ml-1">
+                            <span className="h-3 w-3 text-blue-500">✓</span>
+                            <span className="h-3 w-3 text-blue-500">✓</span>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export function ChatMessageList({ messages, onSuggestionClick, isTyping = false }: ChatMessageListProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -67,7 +170,7 @@ export function ChatMessageList({ messages, onSuggestionClick, isTyping = false 
         if (scrollRef.current) {
             scrollRef.current.scrollIntoView({ behavior: 'smooth' });
         }
-    }, [messages]);
+    }, [messages, isTyping]);
 
     // Si pas de messages, afficher les catégories de suggestions
     if (messages.length === 0) {
@@ -77,82 +180,41 @@ export function ChatMessageList({ messages, onSuggestionClick, isTyping = false 
     }
 
     return (
-        <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4">
-                {messages.map((message) => {
+        <ScrollArea className="flex-1 p-4 bg-slate-50/30 dark:bg-transparent">
+            <div className="flex flex-col">
+                {messages.map((message, index) => {
                     const isOwnMessage = message.sender_id === currentUser?.id;
-                    const isAdmin = message.is_admin;
+                    const isNextSameSender = index < messages.length - 1 && messages[index+1].sender_id === message.sender_id;
 
                     return (
-                        <div
-                            key={message.id}
-                            className={`flex gap-3 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}
-                        >
-                            {/* Avatar */}
-                            <Avatar className={`h-8 w-8 flex-shrink-0 shadow-sm border ${isOwnMessage ? 'border-primary/20' : 'border-border/50'}`}>
-                                <AvatarFallback className={
-                                    message.sender_id === '00000000-0000-0000-0000-000000000000'
-                                        ? 'bg-gradient-to-br from-purple-500 to-pink-500 text-white'
-                                        : isAdmin ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                                }>
-                                    {message.sender_id === '00000000-0000-0000-0000-000000000000' ? '🤖' : isAdmin ? 'A' : 'U'}
-                                </AvatarFallback>
-                            </Avatar>
-
-                            {/* Message bubble */}
-                            <div className={`flex flex-col gap-1 max-w-[80%] ${isOwnMessage ? 'items-end' : 'items-start'}`}>
-                                {/* Badge IA si message généré par l'IA */}
-                                {message.sender_id === '00000000-0000-0000-0000-000000000000' && (
-                                    <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 font-semibold px-2 py-0.5 rounded-full mb-0.5">
-                                        🤖 Réponse automatisée
-                                    </span>
-                                )}
-                                <div
-                                    className={`rounded-2xl px-4 py-2.5 shadow-sm transition-all duration-200 ${isOwnMessage
-                                        ? 'bg-gradient-to-tr from-primary to-primary/90 text-primary-foreground rounded-tr-sm shadow-primary/20'
-                                        : message.sender_id === '00000000-0000-0000-0000-000000000000'
-                                            ? 'bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/10 dark:to-pink-900/10 border border-purple-100/50 dark:border-purple-800/30 text-zinc-800 dark:text-zinc-100 rounded-tl-sm'
-                                            : 'bg-muted text-foreground rounded-tl-sm border border-border/50'
-                                        }`}
-                                >
-                                    <div className="text-[15px] leading-relaxed break-words">
-                                        {formatMessage(message.message, message.sender_id === '00000000-0000-0000-0000-000000000000')}
-                                    </div>
-
-                                    {/* Fichiers attachés */}
-                                    <MessageAttachments messageId={message.id} />
-                                </div>
-
-                                {/* Timestamp */}
-                                <span className="text-xs text-muted-foreground px-1">
-                                    {format(new Date(message.created_at), 'HH:mm', { locale: fr })}
-                                    {message.read_at && isOwnMessage && (
-                                        <span className="ml-1">✓✓</span>
-                                    )}
-                                </span>
-                            </div>
-                        </div>
+                        <MessageItem 
+                            key={message.id} 
+                            message={message} 
+                            isOwnMessage={isOwnMessage}
+                            onSuggestionClick={onSuggestionClick}
+                            isNextSameSender={isNextSameSender}
+                        />
                     );
                 })}
 
                 {/* Typing indicator */}
                 {isTyping && (
-                    <div className="flex gap-3">
-                        <Avatar className="h-8 w-8 flex-shrink-0">
-                            <AvatarFallback className="bg-primary text-primary-foreground">A</AvatarFallback>
+                    <div className="flex gap-3 mb-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <Avatar className="h-9 w-9 flex-shrink-0 shadow-sm">
+                            <AvatarFallback className="bg-primary text-primary-foreground font-bold text-xs">Ng</AvatarFallback>
                         </Avatar>
-                        <div className="bg-muted rounded-2xl px-4 py-3 rounded-tl-sm">
-                            <div className="flex gap-1">
-                                <span className="w-2 h-2 bg-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                                <span className="w-2 h-2 bg-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                                <span className="w-2 h-2 bg-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                        <div className="bg-white dark:bg-zinc-900 border border-border/40 rounded-2xl px-4 py-3 rounded-tl-sm shadow-sm flex items-center">
+                            <div className="flex gap-1.5">
+                                <span className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                                <span className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                                <span className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
                             </div>
                         </div>
                     </div>
                 )}
 
                 {/* Élément pour auto-scroll */}
-                <div ref={scrollRef} />
+                <div ref={scrollRef} className="h-4" />
             </div>
         </ScrollArea>
     );

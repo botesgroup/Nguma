@@ -89,102 +89,83 @@ const Dashboard = () => {
     : '10';
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 lg:gap-0">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Vue d'ensemble de vos investissements
+    <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8 animate-fade-in">
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-6">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground">Dashboard</h1>
+          <p className="text-sm md:text-base text-muted-foreground font-medium">
+            Bienvenue sur votre espace personnel Nguma.
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 md:gap-3">
           <DepositDialog />
           <NewContractDialog />
-          <TransferProfitToDepositDialog wallet={wallet} />
-          <ReinvestDialog wallet={wallet} />
-          <WithdrawDialog wallet={wallet} />
-        </div>
-      </div>
-
-      {/* Removed: Indicateur de l'état des dépôts */}
-      {/* {!isLoadingDepositStatus && depositStatus && (
-        <div className={`p-4 rounded-lg border ${
-          depositStatus.isActive
-            ? 'bg-green-50 border-green-200 text-green-800'
-            : 'bg-red-50 border-red-200 text-red-800'
-        }`}>
-          <div className="flex items-center gap-2">
-            {depositStatus.isActive ? (
-              <CheckCircle className="h-5 w-5 text-green-600" />
-            ) : (
-              <AlertCircle className="h-5 w-5 text-red-600" />
-            )}
-            <div className="flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-medium">
-                  {depositStatus.isActive
-                    ? '✅ Dépôts activés'
-                    : '❌ Dépôts désactivés'}
-                </span>
-                {depositStatus.timeUntilNext && (
-                  <span className="text-sm font-semibold bg-secondary px-2 py-1 rounded whitespace-nowrap">
-                    {depositStatus.timeUntilNext}
-                  </span>
-                )}
-              </div>
-              <p className="text-sm opacity-80 mt-1">
-                {depositStatus.message}
-              </p>
+          <div className="col-span-2 sm:contents grid grid-cols-2 gap-2">
+            <TransferProfitToDepositDialog wallet={wallet} />
+            <ReinvestDialog wallet={wallet} />
+            <div className="col-span-2 sm:contents">
+              <WithdrawDialog wallet={wallet} />
             </div>
           </div>
         </div>
-      )} */}
+      </div>
 
       {/* Wallet Cards with Loading State */}
-      {isLoadingWallet || isLoadingContracts ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-[120px] rounded-lg" />
-          ))}
-        </div>
-      ) : (
-        <WalletCard wallet={wallet} contracts={contracts} />
-      )}
-
-
-
-      {/* Contracts Section with Enhanced Empty State */}
-      <div>
-        <div className="mb-4">
-          <h2 className="text-xl sm:text-2xl font-bold">Mes Contrats</h2>
-        </div>
-        {isLoadingContracts ? (
-          <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {[...Array(3)].map((_, i) => (
-              <Skeleton key={i} className="h-[280px] rounded-lg" />
-            ))}
-          </div>
-        ) : activeContracts.length > 0 ? (
-          <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {activeContracts.map((contract) => (
-              <ContractCard key={contract.id} contract={contract} formatCurrency={formatCurrency} />
+      <div className="w-full overflow-hidden">
+        {isLoadingWallet || isLoadingContracts ? (
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-[100px] md:h-[120px] rounded-2xl shadow-sm" />
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 bg-muted/50 rounded-lg border-2 border-dashed">
-            <div className="text-4xl mb-4">📊</div>
-            <h3 className="text-lg font-semibold mb-2">
-              Commencez votre premier investissement
+          <div className="w-full">
+            <WalletCard wallet={wallet} contracts={contracts} />
+          </div>
+        )}
+      </div>
+
+      {/* Contracts Section with Enhanced Empty State */}
+      <div className="space-y-4 md:space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl md:text-2xl font-bold tracking-tight">Mes Contrats Actifs</h2>
+          {activeContracts.length > 0 && (
+             <span className="text-xs md:text-sm font-semibold bg-primary/10 text-primary px-3 py-1 rounded-full">
+               {activeContracts.length} contrat{activeContracts.length > 1 ? 's' : ''}
+             </span>
+          )}
+        </div>
+        
+        {isLoadingContracts ? (
+          <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-[250px] md:h-[280px] rounded-2xl shadow-sm" />
+            ))}
+          </div>
+        ) : activeContracts.length > 0 ? (
+          <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {activeContracts.map((contract) => (
+              <div key={contract.id} className="transform transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]">
+                <ContractCard contract={contract} formatCurrency={formatCurrency} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-16 md:py-24 bg-white dark:bg-zinc-900 rounded-3xl border-2 border-dashed border-border/60 shadow-elegant transition-all duration-500 hover:border-primary/40 group">
+            <div className="relative mx-auto w-20 h-20 md:w-24 md:h-24 mb-6">
+              <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping opacity-20 group-hover:opacity-40 transition-opacity"></div>
+              <div className="relative flex items-center justify-center w-full h-full bg-primary/10 rounded-full text-4xl md:text-5xl">📊</div>
+            </div>
+            <h3 className="text-lg md:text-xl font-bold mb-2 tracking-tight">
+              Aucun contrat actif
             </h3>
-            <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto px-4">
-              Créez un contrat pour commencer à générer des profits mensuels de {monthlyRatePercent}%
+            <p className="text-sm md:text-base text-muted-foreground mb-8 max-w-sm mx-auto px-6 leading-relaxed">
+              Propulsez vos revenus en créant votre premier contrat dès aujourd'hui et générez jusqu'à <span className="text-primary font-bold">{monthlyRatePercent}%</span> de profit mensuel.
             </p>
             <NewContractDialog />
           </div>
         )}
       </div>
-
-
     </div>
   );
 };

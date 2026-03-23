@@ -3,11 +3,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HashRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { HashRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AppHeader } from "@/components/AppHeader";
 import { Loader2 } from "lucide-react";
+import { isRecoveryFlow, clearNavigationState } from "@/services/navigationService";
+import { useNavigationState } from "@/hooks/useNavigationState";
 
 // Lazy load pages
 const Index = lazy(() => import("./pages/Index"));
@@ -63,31 +65,52 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => (
   </SidebarProvider>
 );
 
+/**
+ * AppInitializer - Initialize application state and handle navigation redirects
+ * 
+ * This component:
+ * 1. Forces application to start on index ("/") on initial mount/refresh
+ * 2. Skips redirect for password recovery flows
+ * 3. Clears saved navigation state on app initialization
+ */
 const AppInitializer = () => {
   const navigate = useNavigate();
-  const hasRedirected = React.useRef(false);
+  const location = useLocation();
+  const hasInitializedRef = React.useRef(false);
+  const { clearState } = useNavigationState();
 
   React.useEffect(() => {
-    // Force application to start on index ("/") ONLY on initial mount/refresh
-    // Use a ref to prevent this from triggering on internal navigation
-    // EXCEPTION: Don't redirect if user arrives with a password recovery token or on update-password route
-    if (!hasRedirected.current) {
-      const hash = window.location.hash;
-      const isRecoveryFlow = 
-        hash.includes('type=recovery') || 
-        hash.includes('access_token=') || 
-        hash.includes('/update-password') ||
-        hash.includes('error_description='); // Handle error states too
-      
-      if (!isRecoveryFlow && hash && hash !== '#/') {
-        console.log("AppInitializer: Non-recovery hash detected, redirecting to index:", hash);
-        navigate('/', { replace: true });
-      } else if (isRecoveryFlow) {
-        console.log("AppInitializer: Recovery flow detected, skipping redirect:", hash);
-      }
-      hasRedirected.current = true;
+    // Only run once on initial mount
+    if (hasInitializedRef.current) return;
+    
+    const hash = window.location.hash;
+    const isRecovery = isRecoveryFlow(hash);
+
+    // Log initialization for debugging
+    console.log("AppInitializer:", {
+      hash,
+      isRecovery,
+      pathname: location.pathname
+    });
+
+    // Skip redirect for recovery flows
+    if (isRecovery) {
+      console.log("AppInitializer: Recovery flow detected, skipping redirect");
+      hasInitializedRef.current = true;
+      return;
     }
-  }, [navigate]);
+
+    // Clear any saved navigation state on fresh app load
+    clearState();
+
+    // Redirect to index if there's a hash but it's not the root
+    if (hash && hash !== '#/' && hash !== '#') {
+      console.log("AppInitializer: Redirecting non-recovery hash to index:", hash);
+      navigate('/', { replace: true });
+    }
+
+    hasInitializedRef.current = true;
+  }, [navigate, location.pathname, clearState]);
 
   return null;
 };
