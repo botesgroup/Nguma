@@ -158,7 +158,7 @@ export const WithdrawDialog = ({ wallet }: WithdrawDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if (!isOpen) reset(); }}>
       <DialogTrigger asChild>
-        <Button variant="secondary">Retirer</Button>
+        <Button variant="destructive">Retirer</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -280,6 +280,7 @@ export const WithdrawDialog = ({ wallet }: WithdrawDialogProps) => {
 
               <Button
                 type="button"
+                variant="destructive"
                 onClick={() => handleDetailsSubmit(paymentDetails)}
                 disabled={requestOTPMutation.isPending || !amount || parseFloat(amount) <= 0 || !hasSufficientBalance}
                 className="w-full"
@@ -317,7 +318,7 @@ export const WithdrawDialog = ({ wallet }: WithdrawDialogProps) => {
               </div>
             </div>
             <DialogFooter className="flex justify-between">
-              <Button type="submit" disabled={verifyOTPMutation.isPending || otpCode.length !== 6} className="w-full">
+              <Button type="submit" variant="destructive" disabled={verifyOTPMutation.isPending || otpCode.length !== 6} className="w-full">
                 {verifyOTPMutation.isPending ? "Vérification..." : "Confirmer le retrait"}
               </Button>
             </DialogFooter>
