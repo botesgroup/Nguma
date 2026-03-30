@@ -2,9 +2,20 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import DOMPurify from "dompurify";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+/**
+ * Sanitizes an HTML string to prevent XSS attacks.
+ * @param html The potentially unsafe HTML string.
+ * @returns A sanitized HTML string.
+ */
+export function sanitizeHtml(html: string): string {
+  if (!html) return "";
+  return DOMPurify.sanitize(html);
 }
 
 /**

@@ -128,6 +128,30 @@ export const WithdrawDialog = ({ wallet }: WithdrawDialogProps) => {
   };
 
   const handleDetailsSubmit = (formData: Record<string, any>) => {
+    // Validation des adresses selon la méthode
+    if (selectedMethod) {
+      const addressField = Object.keys(formData).find(k => k.includes('address') || k.includes('phone') || k.includes('number'));
+      if (addressField) {
+        const address = formData[addressField];
+        const methodCode = selectedMethod.code.toLowerCase();
+        
+        // Regex USDT (TRC20 commence par T, ERC20 par 0x)
+        if (methodCode.includes('trc20') && !/^T[A-Za-z0-9]{33}$/.test(address)) {
+          toast({ variant: "destructive", title: "Format invalide", description: "L'adresse USDT TRC20 doit commencer par 'T' et faire 34 caractères." });
+          return;
+        }
+        if (methodCode.includes('erc20') && !/^0x[a-fA-F0-9]{40}$/.test(address)) {
+          toast({ variant: "destructive", title: "Format invalide", description: "L'adresse Ethereum/ERC20 doit commencer par '0x' et faire 42 caractères." });
+          return;
+        }
+        // Validation basique téléphone si mobile money
+        if (methodCode.includes('mobile') && !/^\+?[0-9]{7,15}$/.test(address)) {
+          toast({ variant: "destructive", title: "Format invalide", description: "Veuillez entrer un numéro de téléphone valide." });
+          return;
+        }
+      }
+    }
+
     setPaymentDetails(formData);
     requestOTPMutation.mutate();
   };

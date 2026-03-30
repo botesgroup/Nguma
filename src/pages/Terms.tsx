@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Check, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getSettings } from "@/services/settingsService";
+import { sanitizeHtml } from "@/lib/utils";
 
 const Terms = () => {
     const navigate = useNavigate();
@@ -46,7 +47,7 @@ const Terms = () => {
                         ) : (
                             <div
                                 className="prose prose-sm dark:prose-invert max-w-none space-y-6"
-                                dangerouslySetInnerHTML={{ __html: termsContent }}
+                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(termsContent) }}
                             />
                         )}
                     </ScrollArea>
