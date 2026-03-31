@@ -1,1 +1,0 @@
-import{u as t,r as s,s as u}from"./index-CbsEs-69.js";const n=()=>{const a=t();return s.useEffect(()=>{(async()=>{try{await u.auth.signOut()}finally{a("/auth",{replace:!0})}})()},[a]),null};export{n as default};

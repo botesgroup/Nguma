@@ -1,1 +1,0 @@
-import{s}from"./index-CbsEs-69.js";const e=async(a,o)=>{try{const{data:r,error:t}=await s.functions.invoke("chat-ai",{body:{conversationId:a,message:o}});if(t)throw t;return r}catch{return{shouldEscalate:!0}}};export{e as callChatAI};
