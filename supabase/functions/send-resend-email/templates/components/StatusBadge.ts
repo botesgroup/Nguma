@@ -1,8 +1,9 @@
-export const StatusBadge = (type: 'success' | 'error' | 'info', text: string): string => {
+export const StatusBadge = (type: 'success' | 'error' | 'info' | 'warning', text: string): string => {
   const colors = {
     success: { bg: '#D1FAE5', text: '#065F46' },
     error: { bg: '#FEE2E2', text: '#991B1B' },
-    info: { bg: '#DBEAFE', text: '#1E40AF' }
+    info: { bg: '#DBEAFE', text: '#1E40AF' },
+    warning: { bg: '#FEF3C7', text: '#92400E' }
   };
   
   return `

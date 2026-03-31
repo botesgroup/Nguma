@@ -33,6 +33,37 @@ const renderWithdrawalOtp = (params: EmailParams, helpers: TemplateHelpers): Tem
   };
 };
 
+const renderPasswordResetOtp = (params: EmailParams, helpers: TemplateHelpers): TemplateData => {
+  const { siteUrl } = helpers;
+  const { name, otp_code } = params;
+
+  const subject = `Réinitialisation de votre mot de passe`;
+  const previewText = `Votre code de réinitialisation est ${otp_code}.`;
+
+  const content = `
+    ${StatusBadge('warning', 'Réinitialisation')}
+    <h2>Réinitialisation de mot de passe</h2>
+    <p class="lead" style="font-size: 16px; line-height: 1.5; color: #4B5563;">
+      Bonjour <strong>${name}</strong>,<br><br>
+      Vous avez demandé la réinitialisation de votre mot de passe Nguma. Utilisez le code ci-dessous pour finaliser l'opération.
+    </p>
+    
+    <div style="background: #FFFBEB; border: 2px dashed #D97706; border-radius: 12px; padding: 20px; text-align: center; margin: 30px 0;">
+      <span style="display:block; font-size: 14px; color: #92400E; margin-bottom: 8px;">Code de réinitialisation (valide 15 min)</span>
+      <span style="display:block; font-size: 32px; color: #B45309; letter-spacing: 8px; font-weight: 700; font-family: monospace;">${otp_code}</span>
+    </div>
+    
+    <p style="font-size: 14px; color: #6B7280;">Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email en toute sécurité. Votre mot de passe restera inchangé.</p>
+  `;
+  const html = BaseLayout(content, previewText, siteUrl);
+  return {
+    subject,
+    previewText,
+    text: `Bonjour ${name}, votre code de réinitialisation de mot de passe est ${otp_code}. Ce code est valide pendant 15 minutes.`,
+    html
+  };
+};
+
 const renderPasswordChanged = (params: EmailParams, helpers: TemplateHelpers): TemplateData => {
   const { escapeHtml, formatDate, siteUrl } = helpers;
   const { name, date } = params;
@@ -238,4 +269,11 @@ export const twoFactorDisabledConfirmedTemplate: EmailTemplate = {
   category: 'security',
   requiredFields: ['to', 'name'],
   render: render2FaDisabledConfirmed
+};
+
+export const passwordResetOtpTemplate: EmailTemplate = {
+  id: 'password_reset_otp',
+  category: 'security',
+  requiredFields: ['to', 'name', 'otp_code'],
+  render: renderPasswordResetOtp
 };

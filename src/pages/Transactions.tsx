@@ -256,14 +256,34 @@ const TransactionsPage = () => {
                   <TableCell>{tx.description}</TableCell>
                   <TableCell><Badge variant={getStatusVariant(tx.status)} className="capitalize">{tx.status}</Badge></TableCell>
                   <TableCell>
-                    {tx.type === 'deposit' && tx.proof_url ? (
-                      <div className="flex flex-col gap-1">
-                        <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => { setSelectedProofUrl(tx.proof_url); setProofModalOpen(true); }}>
-                          Voir la preuve
-                        </Button>
-                        {/* Ligne de débogage pour afficher l'URL */}
-                        <p className="text-xs text-muted-foreground break-all max-w-[150px] truncate">{tx.proof_url}</p>
-                      </div>
+                    {tx.proof_url ? (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-xs h-7" 
+                        onClick={() => { 
+                          // S'assurer que l'URL est complète
+                          let fullUrl = tx.proof_url;
+                          if (fullUrl && !fullUrl.startsWith('http')) {
+                            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+                            
+                            // Déterminer le bucket en fonction du type de transaction
+                            // Les dépôts utilisent 'payment_proofs', les retraits 'withdrawal-proofs'
+                            const bucket = tx.type === 'deposit' ? 'payment_proofs' : 'withdrawal-proofs';
+                            
+                            // Vérifier si le proof_url contient déjà le bucket (ex: "payment_proofs/image.jpg")
+                            if (fullUrl.startsWith(bucket + '/')) {
+                              fullUrl = `${supabaseUrl}/storage/v1/object/public/${fullUrl}`;
+                            } else {
+                              fullUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${fullUrl}`;
+                            }
+                          }
+                          setSelectedProofUrl(fullUrl); 
+                          setProofModalOpen(true); 
+                        }}
+                      >
+                        Voir la preuve
+                      </Button>
                     ) : (
                       <span className="text-xs text-muted-foreground">-</span>
                     )}

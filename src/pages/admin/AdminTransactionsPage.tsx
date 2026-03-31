@@ -311,7 +311,23 @@ const AdminTransactionsPage = () => {
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            onClick={() => { setSelectedProofUrl(tx.proof_url); setProofModalOpen(true); }}
+                                                            onClick={() => { 
+                                                                let fullUrl = tx.proof_url;
+                                                                if (fullUrl && !fullUrl.startsWith('http')) {
+                                                                    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+                                                                    // Utiliser le type de transaction pour déterminer le bucket probable
+                                                                    const bucket = tx.type === 'withdrawal' ? 'withdrawal-proofs' : 'payment_proofs';
+                                                                    
+                                                                    // Vérifier si le proof_url contient déjà le bucket (ex: "payment_proofs/image.jpg")
+                                                                    if (fullUrl.startsWith(bucket + '/')) {
+                                                                        fullUrl = `${supabaseUrl}/storage/v1/object/public/${fullUrl}`;
+                                                                    } else {
+                                                                        fullUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${fullUrl}`;
+                                                                    }
+                                                                }
+                                                                setSelectedProofUrl(fullUrl); 
+                                                                setProofModalOpen(true); 
+                                                            }}
                                                         >
                                                             <Eye className="h-4 w-4 text-blue-500" />
                                                         </Button>

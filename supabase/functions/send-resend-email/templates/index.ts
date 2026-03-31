@@ -8,7 +8,7 @@ import { profitTransferConfirmedTemplate, newProfitTransferAdminTemplate } from 
 
 // Import security templates
 import { securityAlertTemplate } from './categories/security/securityAlert.ts';
-import { withdrawalOtpTemplate, passwordChangedTemplate, emailChangedOldAddressTemplate, emailChangedNewAddressTemplate, twoFactorSetupConfirmedTemplate, twoFactorDisabledConfirmedTemplate } from './categories/security/auth.ts';
+import { withdrawalOtpTemplate, passwordChangedTemplate, emailChangedOldAddressTemplate, emailChangedNewAddressTemplate, twoFactorSetupConfirmedTemplate, twoFactorDisabledConfirmedTemplate, passwordResetOtpTemplate } from './categories/security/auth.ts';
 import { profileTemplates } from './categories/security/profiles.ts'; // ✅ Imported profile templates
 import { profileUpdatedByUserTemplate } from './categories/security/profile-update.ts';
 import { backupCodesGeneratedTemplate } from './categories/security/backup-codes.ts';
@@ -77,6 +77,7 @@ export const TEMPLATES: Record<string, EmailTemplate> = {
   '2fa_setup_confirmed': twoFactorSetupConfirmedTemplate,
   '2fa_disabled_confirmed': twoFactorDisabledConfirmedTemplate,
   backup_codes_generated: backupCodesGeneratedTemplate,
+  password_reset_otp: passwordResetOtpTemplate,
 
   // Profile Templates
   profile_updated_by_admin: profileTemplates[0], // ✅ Added profile template

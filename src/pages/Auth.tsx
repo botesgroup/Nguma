@@ -41,6 +41,12 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showForgotStep, setShowForgotStep] = useState(0); // 0: none, 1: input email (default), 2: input otp & new password
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotOtp, setForgotOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -301,15 +307,90 @@ const Auth = () => {
     }
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/#/update-password`,
+      const { data, error } = await supabase.rpc('request_password_reset_otp', {
+        p_email: email,
       });
+      
       if (error) throw error;
-      toast({
-        title: "Email envoyé",
-        description: "Veuillez vérifier votre boîte de réception (et vos spams) pour réinitialiser votre mot de passe.",
-      });
+      
+      if (data.success) {
+        setForgotEmail(email);
+        setShowForgotStep(2);
+        toast({
+          title: "Code de vérification envoyé",
+          description: data.message || "Veuillez vérifier votre boîte de réception.",
+        });
+      } else {
+        throw new Error(data.error || "Une erreur est survenue.");
+      }
     } catch (error) {
+      console.error("Forgot password error:", error);
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: error instanceof Error ? error.message : "Une erreur est survenue.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPasswordWithOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (newPassword !== confirmNewPassword) {
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Les mots de passe ne correspondent pas.",
+      });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Le mot de passe doit contenir au moins 8 caractères.",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('reset-password-admin', {
+        body: {
+          email: forgotEmail,
+          code: forgotOtp,
+          password: newPassword,
+        },
+      });
+
+      if (error) {
+        // More robust error parsing for Edge Functions
+        let errorMessage = "Une erreur est survenue lors de la réinitialisation.";
+        try {
+          const errorBody = await error.context?.json();
+          errorMessage = errorBody?.error || error.message;
+        } catch (e) {}
+        throw new Error(errorMessage);
+      }
+
+      if (data?.error) throw new Error(data.error);
+
+      toast({
+        title: "Mot de passe réinitialisé !",
+        description: "Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
+      });
+      
+      // Reset flow
+      setShowForgotStep(0);
+      setForgotOtp("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      signInForm.setValue("password", "");
+    } catch (error) {
+      console.error("Reset password error:", error);
       toast({
         variant: "destructive",
         title: "Erreur",
@@ -381,7 +462,69 @@ const Auth = () => {
               </div>
 
               <TabsContent value="signin">
-                {showMFAInput ? (
+                {showForgotStep === 2 ? (
+                  <form onSubmit={handleResetPasswordWithOtp} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reset-otp">Code de réinitialisation</Label>
+                      <Input
+                        id="reset-otp"
+                        placeholder="123456"
+                        value={forgotOtp}
+                        onChange={(e) => setForgotOtp(e.target.value)}
+                        maxLength={6}
+                        className="text-center text-lg tracking-widest"
+                        autoFocus
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground text-center">
+                        Entrez le code à 6 chiffres envoyé à {forgotEmail}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="new-password">Nouveau mot de passe</Label>
+                      <div className="relative">
+                        <Input
+                          id="new-password"
+                          type={showNewPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          required
+                        />
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm" 
+                          className="absolute inset-y-0 right-0 h-full px-3 text-gray-500 hover:bg-transparent" 
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                        >
+                          {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-new-password">Confirmer le mot de passe</Label>
+                      <Input
+                        id="confirm-new-password"
+                        type={showNewPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={confirmNewPassword}
+                        onChange={(e) => setConfirmNewPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? "Enregistrement..." : "Réinitialiser mon mot de passe"}
+                    </Button>
+                    
+                    <Button variant="ghost" type="button" className="w-full" onClick={() => setShowForgotStep(0)}>
+                      Annuler
+                    </Button>
+                  </form>
+                ) : showMFAInput ? (
                   <form onSubmit={useBackupCode ? handleBackupCodeLogin : handleMFAVerify} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="mfa-code">

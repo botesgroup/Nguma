@@ -62,6 +62,7 @@ export const getProfile = async (): Promise<Profile | null> => {
     updated_at: new Date().toISOString(),
     created_at: user.created_at,
     last_dormant_reminder_at: null,
+    banned_until: null,
   };
 
   const { data: insertedProfile, error: insertError } = await supabase
@@ -87,37 +88,50 @@ export const updateProfile = async (profileData: Partial<Profile>) => {
   // Prevent updating the id
   const { id, ...updatableData } = profileData;
 
-  const { data, error } = await supabase
+  // Map profileData to RPC parameters
+  const { data, error } = await supabase.rpc('update_user_profile', {
+    p_first_name: updatableData.first_name || undefined,
+    p_last_name: updatableData.last_name || undefined,
+    p_post_nom: updatableData.post_nom || undefined,
+    p_phone: updatableData.phone || undefined,
+    p_country: updatableData.country || undefined,
+    p_city: updatableData.city || undefined,
+    p_address: updatableData.address || undefined,
+    p_birth_date: updatableData.birth_date || undefined,
+    p_avatar_url: updatableData.avatar_url || undefined,
+  });
+
+  if (error || (data as any)?.success === false) {
+    console.error("Error updating profile:", error || (data as any)?.error);
+    throw new Error((data as any)?.error || "Saisie invalide ou erreur serveur.");
+  }
+
+  // Refetch the updated profile for return and notification
+  const { data: updatedProfile, error: fetchError } = await supabase
     .from("profiles")
-    .update({
-      ...updatableData,
-      updated_at: new Date().toISOString(),
-    })
+    .select("*")
     .eq("id", user.id)
-    .select()
     .single();
 
-  if (error) {
-    console.error("Error updating profile:", error);
-    throw new Error("Could not update profile.");
+  if (fetchError || !updatedProfile) {
+    throw new Error("Profil mis à jour mais impossible de récupérer les nouvelles données.");
   }
 
   // Send a notification email as a side effect
-  if (data) {
+  if (updatedProfile) {
     try {
-      const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
+      const fullName = `${updatedProfile.first_name || ''} ${updatedProfile.last_name || ''}`.trim();
       await sendEmailNotification({
         template_id: 'profile_updated_by_user',
-        to: data.email,
+        to: updatedProfile.email,
         name: fullName || 'Cher utilisateur',
-        userId: data.id,
+        userId: updatedProfile.id,
         date: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       });
     } catch (emailError) {
       console.error("Profile updated, but failed to send notification email:", emailError);
-      // Do not re-throw, as the primary action was successful
     }
   }
 
-  return data;
+  return updatedProfile;
 };

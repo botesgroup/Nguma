@@ -18,6 +18,7 @@ import { FileUploadControl } from '@/components/admin/FileUploadControl'; // Add
 import { DepositSettings } from '@/components/admin/DepositSettings'; // Added import
 import { NotificationPreferences } from '@/components/notifications/NotificationPreferences';
 import { Bell } from 'lucide-react';
+import { MaintenanceModeToggle } from './MaintenanceModeToggle'; // Added import
 
 interface Setting {
   id: string;
@@ -125,7 +126,7 @@ export const AdminSettings = () => {
     },
     insurance: {
       label: 'Assurance des Contrats',
-      icon: ShieldCheck,
+      icon: ShieldCheck, // Ajout d'une virgule ici si c'était le problème
       description: 'Configuration du système d\'assurance optionnel des contrats',
     },
     payment_methods: {
@@ -142,6 +143,10 @@ export const AdminSettings = () => {
 
   return (
     <div className="space-y-6">
+      {/* --- Maintenance Mode Toggle --- */}
+      <MaintenanceModeToggle />
+      {/* --- End Maintenance Mode Toggle --- */}
+
       <Accordion type="multiple" defaultValue={['security', 'general', 'insurance', 'payment_methods']} className="space-y-4">
         {Object.entries(settingsByCategory || {}).map(([category, categorySettings]) => {
           const categoryInfo = categoryLabels[category] || {
